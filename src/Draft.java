@@ -1,24 +1,24 @@
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.*;
 import java.io.*;
 import java.util.*;
 import java.util.List;
 import java.text.DecimalFormat;
 
 /**
- * Spotify Premium Desktop System - LDCW6123 Group Project
- * Refined Professional Java Swing GUI Architecture
+ * Spotify Desktop System - LDCW6123 Group Project
+ * Refined Modern Desktop Application (Java Swing)
  * 
- * Design Features:
- * - Anti-Aliased Graphics2D Engine
- * - Custom Rounded Panel Cards & Pill Badges
- * - Graphical Popularity Bar Renderer in JTable
- * - Modern Interactive Tier Cards for Subscription Pricing
- * - Spotify Dark Mode Palette (#121212, #1DB954, #181818)
+ * Features:
+ * - Spotify Dark Theme (#121212, #181818, #1DB954)
+ * - Custom Sleek Dark Scrollbars (No default Windows scrollbars)
+ * - Borderless Modern Table Header & Styled Rows (No harsh white grid lines)
+ * - Graphical Anti-Aliased Popularity Pill Bar Renderer
+ * - Auto-detects & loads 'Spotify Dataset/train.csv' or 'data/dataset.csv'
  */
 public class Draft extends JFrame {
 
@@ -33,7 +33,7 @@ public class Draft extends JFrame {
     public static final Color INPUT_BG = new Color(32, 32, 32);
     public static final Color TEXT_WHITE = new Color(255, 255, 255);
     public static final Color TEXT_MUTED = new Color(167, 167, 167);
-    public static final Color BORDER_COLOR = new Color(45, 45, 45);
+    public static final Color BORDER_COLOR = new Color(38, 38, 38);
 
     // --- Custom Anti-Aliased Rounded Panel ---
     public static class RoundedPanel extends JPanel {
@@ -69,16 +69,52 @@ public class Draft extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Fill background
             g2.setColor(backgroundColor);
             g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, cornerRadius, cornerRadius);
 
-            // Draw border if set
             if (borderColor != null) {
                 g2.setColor(borderColor);
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, cornerRadius, cornerRadius);
             }
             g2.dispose();
+        }
+    }
+
+    // --- Custom Dark ScrollBar UI ---
+    public static class DarkScrollBarUI extends BasicScrollBarUI {
+        @Override
+        protected void configureScrollBarColors() {
+            this.thumbColor = new Color(60, 60, 60);
+            this.trackColor = DARK_BG;
+        }
+
+        @Override
+        protected JButton createDecreaseButton(int orientation) { return createZeroButton(); }
+        @Override
+        protected JButton createIncreaseButton(int orientation) { return createZeroButton(); }
+
+        private JButton createZeroButton() {
+            JButton button = new JButton();
+            button.setPreferredSize(new Dimension(0, 0));
+            button.setMinimumSize(new Dimension(0, 0));
+            button.setMaximumSize(new Dimension(0, 0));
+            return button;
+        }
+
+        @Override
+        protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+            if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) return;
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(isThumbRollover() ? new Color(100, 100, 100) : thumbColor);
+            g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2, thumbBounds.width - 4, thumbBounds.height - 4, 8, 8);
+            g2.dispose();
+        }
+
+        @Override
+        protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+            g.setColor(DARK_BG);
+            g.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
         }
     }
 
@@ -112,6 +148,7 @@ public class Draft extends JFrame {
 
     private List<SpotifyTrack> trackDatabase = new ArrayList<>();
     private Set<String> availableGenres = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+    private String loadedDatasetPath = "";
 
     // --- GUI Components ---
     private JPanel mainContentPanel;
@@ -127,7 +164,7 @@ public class Draft extends JFrame {
     private DefaultTableModel recTableModel;
     private JLabel recStatusLabel;
 
-    // Calculator Controls (Interactive Cards)
+    // Calculator Controls
     private RoundedPanel studentCard, individualCard, duoCard, familyCard;
     private String selectedTier = "Individual";
     private double selectedBasePrice = 10.99;
@@ -146,16 +183,16 @@ public class Draft extends JFrame {
     public Draft() {
         super("Spotify System - LDCW6123 Desktop App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1180, 760);
+        setSize(1200, 760);
         setMinimumSize(new Dimension(1020, 680));
         setLocationRelativeTo(null);
 
-        // Anti-aliased text rendering globally
+        // Anti-aliased font rendering
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
 
         setupDarkThemeDefaults();
-        loadDataset("data/dataset.csv");
+        loadDatasetAuto();
         initUI();
     }
 
@@ -177,7 +214,7 @@ public class Draft extends JFrame {
         Container container = getContentPane();
         container.setLayout(new BorderLayout());
 
-        // Left Sidebar
+        // Left Sidebar Navigation
         JPanel sidebar = createSidebar();
         container.add(sidebar, BorderLayout.WEST);
 
@@ -195,79 +232,46 @@ public class Draft extends JFrame {
         JPanel statusBar = createStatusBar();
         container.add(statusBar, BorderLayout.SOUTH);
 
-        // Default selection state
         switchNavTab("REC");
     }
 
     // ==========================================
-    // SIDEBAR NAVIGATION
+    // SIDEBAR NAVIGATION (No System Info Box)
     // ==========================================
     private JPanel createSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(SIDEBAR_BG);
-        sidebar.setPreferredSize(new Dimension(250, 0));
+        sidebar.setPreferredSize(new Dimension(240, 0));
         sidebar.setBorder(BorderFactory.createEmptyBorder(25, 20, 25, 20));
 
-        // Brand Logo & Header
-        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        logoPanel.setBackground(SIDEBAR_BG);
-        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel logoIcon = new JLabel("🟢 ");
-        logoIcon.setFont(new Font("Segoe UI", Font.PLAIN, 22));
-
+        // Brand Header (Standard text, no hollow emoji boxes)
         JLabel logoLabel = new JLabel("Spotify");
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         logoLabel.setForeground(TEXT_WHITE);
+        logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        logoPanel.add(logoIcon);
-        logoPanel.add(logoLabel);
-
-        JLabel subLabel = new JLabel("  LDCW6123 Group Project");
+        JLabel subLabel = new JLabel("LDCW6123 Group Project");
         subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         subLabel.setForeground(TEXT_MUTED);
         subLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        sidebar.add(logoPanel);
+        sidebar.add(logoLabel);
         sidebar.add(subLabel);
         sidebar.add(Box.createRigidArea(new Dimension(0, 35)));
 
         // Navigation Buttons
-        navRecBtn = createNavButton("🎵   Recommendation Assistant", "REC");
-        navCalcBtn = createNavButton("💳   Subscription Calculator", "CALC");
-        navDataBtn = createNavButton("📊   Track Dataset Explorer", "DATA");
+        navRecBtn = createNavButton("Recommendation Assistant", "REC");
+        navCalcBtn = createNavButton("Subscription Calculator", "CALC");
+        navDataBtn = createNavButton("Track Dataset Explorer", "DATA");
 
         sidebar.add(navRecBtn);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 12)));
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
         sidebar.add(navCalcBtn);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 12)));
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
         sidebar.add(navDataBtn);
 
         sidebar.add(Box.createVerticalGlue());
-
-        // Footer info card
-        RoundedPanel infoCard = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
-        infoCard.setLayout(new BoxLayout(infoCard, BoxLayout.Y_AXIS));
-        infoCard.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
-        infoCard.setMaximumSize(new Dimension(210, 80));
-        infoCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel infoTitle = new JLabel("SYSTEM INFO");
-        infoTitle.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        infoTitle.setForeground(SPOTIFY_GREEN);
-
-        JLabel infoBody = new JLabel("<html><body style='color:#A7A7A7; font-size:10px;'>"
-                + "Course: LDCW6123<br>"
-                + "Engine: Java Swing Dark GUI<br>"
-                + "Dataset: Kaggle Spotify Tracks"
-                + "</body></html>");
-
-        infoCard.add(infoTitle);
-        infoCard.add(Box.createRigidArea(new Dimension(0, 4)));
-        infoCard.add(infoBody);
-
-        sidebar.add(infoCard);
 
         return sidebar;
     }
@@ -280,7 +284,7 @@ public class Draft extends JFrame {
         btn.setFocusPainted(false);
         btn.setHorizontalAlignment(SwingConstants.LEFT);
         btn.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
-        btn.setMaximumSize(new Dimension(210, 48));
+        btn.setMaximumSize(new Dimension(210, 46));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -338,7 +342,7 @@ public class Draft extends JFrame {
         topPanel.add(descLabel);
         topPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Filter Controls Rounded Card
+        // Filter Controls Card
         RoundedPanel filterCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
         filterCard.setLayout(new FlowLayout(FlowLayout.LEFT, 18, 12));
 
@@ -361,7 +365,7 @@ public class Draft extends JFrame {
         popLbl.setForeground(TEXT_MUTED);
         filterCard.add(popLbl);
 
-        popularitySlider = new JSlider(0, 100, 50);
+        popularitySlider = new JSlider(0, 100, 40);
         popularitySlider.setBackground(CARD_BG);
         popularitySlider.setForeground(SPOTIFY_GREEN);
         popularitySlider.setPreferredSize(new Dimension(130, 38));
@@ -387,7 +391,7 @@ public class Draft extends JFrame {
         filterBtn.addActionListener(e -> applyRecommendationFilter());
         filterCard.add(filterBtn);
 
-        JButton surpriseBtn = new JButton("🎲 Surprise Me");
+        JButton surpriseBtn = new JButton("Surprise Me");
         stylePillButton(surpriseBtn, CARD_HOVER_BG, TEXT_WHITE);
         surpriseBtn.addActionListener(e -> pickRandomRecommendation());
         filterCard.add(surpriseBtn);
@@ -405,12 +409,10 @@ public class Draft extends JFrame {
         JTable recTable = new JTable(recTableModel);
         styleTable(recTable);
 
-        // Custom Popularity Progress Bar Column Renderer!
+        // Custom Popularity Progress Bar Renderer
         recTable.getColumnModel().getColumn(5).setCellRenderer(new PopularityBarRenderer());
 
-        JScrollPane scrollPane = new JScrollPane(recTable);
-        scrollPane.getViewport().setBackground(DARK_BG);
-        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        JScrollPane scrollPane = createDarkScrollPane(recTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         // Bottom Status Info
@@ -431,6 +433,7 @@ public class Draft extends JFrame {
 
         int count = 0;
         int totalPop = 0;
+        int limit = 500; // Limit displayed rows for high performance
 
         for (SpotifyTrack track : trackDatabase) {
             boolean genreMatch = "All Genres".equals(selectedGenre) || track.genre.equalsIgnoreCase(selectedGenre);
@@ -445,13 +448,14 @@ public class Draft extends JFrame {
                 totalPop += track.popularity;
                 recTableModel.addRow(new Object[]{
                         count,
-                        "🎵  " + track.title,
+                        track.title,
                         track.artist,
                         track.album,
                         track.genre.toUpperCase(),
-                        track.popularity, // Passed as Integer for custom Renderer
+                        track.popularity,
                         track.getFormattedDuration()
                 });
+                if (count >= limit) break;
             }
         }
 
@@ -468,7 +472,7 @@ public class Draft extends JFrame {
         recTableModel.setRowCount(0);
         recTableModel.addRow(new Object[]{
                 1,
-                "🎵  " + randomTrack.title,
+                randomTrack.title,
                 randomTrack.artist,
                 randomTrack.album,
                 randomTrack.genre.toUpperCase(),
@@ -476,49 +480,57 @@ public class Draft extends JFrame {
                 randomTrack.getFormattedDuration()
         });
 
-        recStatusLabel.setText("🎲 Surprise Pick: \"" + randomTrack.title + "\" by " + randomTrack.artist + " [" + randomTrack.genre.toUpperCase() + "]");
+        recStatusLabel.setText("Surprise Pick: \"" + randomTrack.title + "\" by " + randomTrack.artist + " [" + randomTrack.genre.toUpperCase() + "]");
     }
 
     // ==========================================
-    // CUSTOM TABLE POPULARITY BAR RENDERER
+    // CUSTOM TABLE POPULARITY RENDERER (Clean Pill)
     // ==========================================
     public static class PopularityBarRenderer extends JPanel implements TableCellRenderer {
-        private JProgressBar progressBar;
-        private JLabel scoreLabel;
+        private int popValue = 0;
 
         public PopularityBarRenderer() {
-            setLayout(new BorderLayout(8, 0));
             setOpaque(true);
             setBackground(CARD_BG);
-
-            progressBar = new JProgressBar(0, 100);
-            progressBar.setForeground(SPOTIFY_GREEN);
-            progressBar.setBackground(INPUT_BG);
-            progressBar.setBorderPainted(false);
-            progressBar.setPreferredSize(new Dimension(80, 10));
-
-            scoreLabel = new JLabel("0");
-            scoreLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            scoreLabel.setForeground(TEXT_WHITE);
-            scoreLabel.setPreferredSize(new Dimension(30, 20));
-
-            add(progressBar, BorderLayout.CENTER);
-            add(scoreLabel, BorderLayout.EAST);
-            setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            int pop = (value instanceof Integer) ? (Integer) value : 50;
-            progressBar.setValue(pop);
-            scoreLabel.setText(pop + "");
-
+            popValue = (value instanceof Integer) ? (Integer) value : 50;
             if (isSelected) {
                 setBackground(CARD_SELECTED_BG);
             } else {
                 setBackground(row % 2 == 0 ? CARD_BG : DARK_BG);
             }
             return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth() - 55;
+            int h = 10;
+            int x = 10;
+            int y = (getHeight() - h) / 2;
+
+            // Background Track
+            g2.setColor(INPUT_BG);
+            g2.fillRoundRect(x, y, w, h, 6, 6);
+
+            // Fill Bar
+            int fillW = (int) (w * (popValue / 100.0));
+            g2.setColor(SPOTIFY_GREEN);
+            g2.fillRoundRect(x, y, fillW, h, 6, 6);
+
+            // Text Label
+            g2.setColor(TEXT_WHITE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            g2.drawString(String.valueOf(popValue), x + w + 12, y + 9);
+
+            g2.dispose();
         }
     }
 
@@ -665,7 +677,7 @@ public class Draft extends JFrame {
         invoiceTextArea.setForeground(TEXT_WHITE);
         invoiceTextArea.setEditable(false);
         invoiceTextArea.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        invoiceCard.add(new JScrollPane(invoiceTextArea), BorderLayout.CENTER);
+        invoiceCard.add(createDarkScrollPane(invoiceTextArea), BorderLayout.CENTER);
 
         totalCostLabel = new JLabel("Total Fare: $10.99");
         totalCostLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
@@ -676,7 +688,6 @@ public class Draft extends JFrame {
         centerGrid.add(invoiceCard);
         panel.add(centerGrid, BorderLayout.CENTER);
 
-        // Highlight default selected card (Individual)
         updateCardHighlights();
         calculateSubscriptionFare();
 
@@ -814,7 +825,7 @@ public class Draft extends JFrame {
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(TEXT_WHITE);
 
-        JLabel descLabel = new JLabel("Browse loaded track dataset from data/dataset.csv, add new entries, or reload dataset.");
+        JLabel descLabel = new JLabel("Browse loaded dataset from " + loadedDatasetPath + ", add new entries, or reload dataset.");
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setForeground(TEXT_MUTED);
 
@@ -827,18 +838,18 @@ public class Draft extends JFrame {
         RoundedPanel toolCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
         toolCard.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
 
-        JButton addTrackBtn = new JButton("➕ Add New Track");
+        JButton addTrackBtn = new JButton("Add New Track");
         stylePillButton(addTrackBtn, SPOTIFY_GREEN, Color.BLACK);
         addTrackBtn.addActionListener(e -> showAddTrackDialog());
         toolCard.add(addTrackBtn);
 
-        JButton reloadBtn = new JButton("🔄 Reload CSV");
+        JButton reloadBtn = new JButton("Reload Dataset");
         stylePillButton(reloadBtn, CARD_HOVER_BG, TEXT_WHITE);
         reloadBtn.addActionListener(e -> {
-            loadDataset("data/dataset.csv");
+            loadDatasetAuto();
             refreshDatasetTable();
             applyRecommendationFilter();
-            JOptionPane.showMessageDialog(this, "Dataset reloaded from data/dataset.csv!", "Reload Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Dataset reloaded from " + loadedDatasetPath + "!", "Reload Success", JOptionPane.INFORMATION_MESSAGE);
         });
         toolCard.add(reloadBtn);
 
@@ -860,9 +871,7 @@ public class Draft extends JFrame {
         JTable datasetTable = new JTable(datasetTableModel);
         styleTable(datasetTable);
 
-        JScrollPane scrollPane = new JScrollPane(datasetTable);
-        scrollPane.getViewport().setBackground(DARK_BG);
-        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        JScrollPane scrollPane = createDarkScrollPane(datasetTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         refreshDatasetTable();
@@ -871,10 +880,14 @@ public class Draft extends JFrame {
 
     private void refreshDatasetTable() {
         datasetTableModel.setRowCount(0);
+        int limit = 1000;
+        int count = 0;
         for (SpotifyTrack t : trackDatabase) {
+            count++;
             datasetTableModel.addRow(new Object[]{
                     t.id, t.title, t.artist, t.album, t.genre.toUpperCase(), t.popularity, t.durationMs
             });
+            if (count >= limit) break;
         }
         if (totalTracksLabel != null) {
             totalTracksLabel.setText("  Total Tracks Loaded: " + trackDatabase.size());
@@ -925,7 +938,7 @@ public class Draft extends JFrame {
 
                 String id = String.valueOf(trackDatabase.size() + 1);
                 SpotifyTrack newTrack = new SpotifyTrack(id, artist, album, title, pop, dur, genre);
-                trackDatabase.add(newTrack);
+                trackDatabase.add(0, newTrack);
                 availableGenres.add(genre);
 
                 refreshDatasetTable();
@@ -958,7 +971,7 @@ public class Draft extends JFrame {
                 BorderFactory.createEmptyBorder(6, 20, 6, 20)
         ));
 
-        JLabel leftStatus = new JLabel("● System Operational | Connected to data/dataset.csv");
+        JLabel leftStatus = new JLabel("System Operational | Dataset: " + loadedDatasetPath);
         leftStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         leftStatus.setForeground(SPOTIFY_GREEN);
 
@@ -972,8 +985,19 @@ public class Draft extends JFrame {
     }
 
     // ==========================================
-    // STYLING UTILITIES
+    // STYLING UTILITIES (Clean ScrollBars & Tables)
     // ==========================================
+    private JScrollPane createDarkScrollPane(JComponent content) {
+        JScrollPane sp = new JScrollPane(content);
+        sp.getViewport().setBackground(DARK_BG);
+        sp.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
+        sp.getVerticalScrollBar().setUI(new DarkScrollBarUI());
+        sp.getHorizontalScrollBar().setUI(new DarkScrollBarUI());
+        sp.getVerticalScrollBar().setPreferredSize(new Dimension(10, 0));
+        sp.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 10));
+        return sp;
+    }
+
     private void stylePillButton(JButton btn, Color bg, Color fg) {
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setBackground(bg);
@@ -990,42 +1014,80 @@ public class Draft extends JFrame {
         table.setBackground(CARD_BG);
         table.setForeground(TEXT_WHITE);
         table.setGridColor(BORDER_COLOR);
-        table.setRowHeight(36);
+        table.setShowGrid(false); // Clean gridless look
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setRowHeight(38);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         table.setSelectionBackground(CARD_SELECTED_BG);
         table.setSelectionForeground(SPOTIFY_GREEN);
 
         JTableHeader header = table.getTableHeader();
-        header.setBackground(SIDEBAR_BG);
+        header.setBackground(DARK_BG);
         header.setForeground(SPOTIFY_GREEN);
         header.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        header.setPreferredSize(new Dimension(0, 38));
+        header.setPreferredSize(new Dimension(0, 40));
         header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
     }
 
     // ==========================================
-    // CSV DATASET LOADER ENGINE
+    // DATASET LOADER ENGINE (Priority Order)
     // ==========================================
-    private void loadDataset(String filename) {
+    private void loadDatasetAuto() {
         trackDatabase.clear();
         availableGenres.clear();
 
-        File csvFile = new File(filename);
-        if (!csvFile.exists()) {
-            csvFile = new File("dataset.csv");
-        }
-        if (!csvFile.exists()) {
+        File f1 = new File("Spotify Dataset/train.csv");
+        File f2 = new File("data/dataset.csv");
+        File f3 = new File("dataset.csv");
+
+        if (f1.exists()) {
+            loadedDatasetPath = "Spotify Dataset/train.csv";
+            parseCsvFile(f1);
+        } else if (f2.exists()) {
+            loadedDatasetPath = "data/dataset.csv";
+            parseCsvFile(f2);
+        } else if (f3.exists()) {
+            loadedDatasetPath = "dataset.csv";
+            parseCsvFile(f3);
+        } else {
+            loadedDatasetPath = "Built-in Fallback Data";
             loadFallbackData();
-            return;
         }
 
+        if (trackDatabase.isEmpty()) {
+            loadFallbackData();
+        }
+    }
+
+    private void parseCsvFile(File csvFile) {
         try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
             String line;
             boolean isHeader = true;
+            int count = 0;
+            int maxTracksToLoad = 10000; // Efficient loading limit
+
             while ((line = br.readLine()) != null) {
                 if (isHeader) { isHeader = false; continue; }
                 String[] tokens = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                if (tokens.length >= 7) {
+                
+                // Detection: train.csv has 21 columns (track_genre is index 20)
+                if (tokens.length >= 21) {
+                    String id = cleanCsvToken(tokens[1]);
+                    String artist = cleanCsvToken(tokens[2]);
+                    String album = cleanCsvToken(tokens[3]);
+                    String title = cleanCsvToken(tokens[4]);
+                    int pop = parseSafeInt(tokens[5], 50);
+                    int dur = parseSafeInt(tokens[6], 200000);
+                    String genre = cleanCsvToken(tokens[20]).toLowerCase();
+
+                    if (!title.isEmpty() && !artist.isEmpty()) {
+                        trackDatabase.add(new SpotifyTrack(id, artist, album, title, pop, dur, genre));
+                        availableGenres.add(genre);
+                        count++;
+                    }
+                } 
+                // Fallback for 7 column schema
+                else if (tokens.length >= 7) {
                     String id = cleanCsvToken(tokens[0]);
                     String artist = cleanCsvToken(tokens[1]);
                     String album = cleanCsvToken(tokens[2]);
@@ -1034,16 +1096,17 @@ public class Draft extends JFrame {
                     int dur = parseSafeInt(tokens[5], 200000);
                     String genre = cleanCsvToken(tokens[6]).toLowerCase();
 
-                    trackDatabase.add(new SpotifyTrack(id, artist, album, title, pop, dur, genre));
-                    availableGenres.add(genre);
+                    if (!title.isEmpty() && !artist.isEmpty()) {
+                        trackDatabase.add(new SpotifyTrack(id, artist, album, title, pop, dur, genre));
+                        availableGenres.add(genre);
+                        count++;
+                    }
                 }
+
+                if (count >= maxTracksToLoad) break;
             }
         } catch (Exception e) {
             System.err.println("Error parsing CSV: " + e.getMessage());
-            loadFallbackData();
-        }
-
-        if (trackDatabase.isEmpty()) {
             loadFallbackData();
         }
     }

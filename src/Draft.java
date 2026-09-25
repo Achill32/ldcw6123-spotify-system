@@ -3,31 +3,84 @@ import javax.swing.border.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.geom.*;
 import java.io.*;
 import java.util.*;
 import java.util.List;
 import java.text.DecimalFormat;
 
 /**
- * Spotify Interactive System - LDCW6123 Group Project
- * Complete Desktop GUI Application (Java Swing)
+ * Spotify Premium Desktop System - LDCW6123 Group Project
+ * Refined Professional Java Swing GUI Architecture
  * 
- * Features:
- * 1. Music Recommendation Assistant (Genre, Popularity, Search, CSV Parsing)
- * 2. Subscription Fare Calculator (Student, Individual, Duo, Family, Multi-currency, Tax & Addons)
- * 3. Track Dataset Explorer & Custom Song Manager
+ * Design Features:
+ * - Anti-Aliased Graphics2D Engine
+ * - Custom Rounded Panel Cards & Pill Badges
+ * - Graphical Popularity Bar Renderer in JTable
+ * - Modern Interactive Tier Cards for Subscription Pricing
+ * - Spotify Dark Mode Palette (#121212, #1DB954, #181818)
  */
 public class Draft extends JFrame {
 
-    // --- Color Palette (Spotify Theme) ---
-    private static final Color SPOTIFY_GREEN = new Color(29, 185, 84);
-    private static final Color DARK_BG = new Color(18, 18, 18);
-    private static final Color SIDEBAR_BG = new Color(0, 0, 0);
-    private static final Color CARD_BG = new Color(24, 24, 24);
-    private static final Color CARD_HOVER_BG = new Color(40, 40, 40);
-    private static final Color TEXT_WHITE = new Color(255, 255, 255);
-    private static final Color TEXT_MUTED = new Color(179, 179, 179);
-    private static final Color ACCENT_GRAY = new Color(50, 50, 50);
+    // --- Spotify Brand Color Palette ---
+    public static final Color SPOTIFY_GREEN = new Color(29, 185, 84);
+    public static final Color SPOTIFY_GREEN_HOVER = new Color(30, 215, 96);
+    public static final Color DARK_BG = new Color(18, 18, 18);
+    public static final Color SIDEBAR_BG = new Color(0, 0, 0);
+    public static final Color CARD_BG = new Color(24, 24, 24);
+    public static final Color CARD_HOVER_BG = new Color(38, 38, 38);
+    public static final Color CARD_SELECTED_BG = new Color(45, 45, 45);
+    public static final Color INPUT_BG = new Color(32, 32, 32);
+    public static final Color TEXT_WHITE = new Color(255, 255, 255);
+    public static final Color TEXT_MUTED = new Color(167, 167, 167);
+    public static final Color BORDER_COLOR = new Color(45, 45, 45);
+
+    // --- Custom Anti-Aliased Rounded Panel ---
+    public static class RoundedPanel extends JPanel {
+        private int cornerRadius;
+        private Color backgroundColor;
+        private Color borderColor;
+
+        public RoundedPanel(int radius, Color bg) {
+            this(radius, bg, null);
+        }
+
+        public RoundedPanel(int radius, Color bg, Color border) {
+            super();
+            this.cornerRadius = radius;
+            this.backgroundColor = bg;
+            this.borderColor = border;
+            setOpaque(false);
+        }
+
+        public void setBackgroundColor(Color bg) {
+            this.backgroundColor = bg;
+            repaint();
+        }
+
+        public void setBorderColor(Color border) {
+            this.borderColor = border;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Fill background
+            g2.setColor(backgroundColor);
+            g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, cornerRadius, cornerRadius);
+
+            // Draw border if set
+            if (borderColor != null) {
+                g2.setColor(borderColor);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, cornerRadius, cornerRadius);
+            }
+            g2.dispose();
+        }
+    }
 
     // --- Data Model ---
     public static class SpotifyTrack {
@@ -64,6 +117,9 @@ public class Draft extends JFrame {
     private JPanel mainContentPanel;
     private CardLayout cardLayout;
     
+    // Sidebar Navigation Buttons
+    private JButton navRecBtn, navCalcBtn, navDataBtn;
+
     // Recommendation Controls
     private JComboBox<String> genreComboBox;
     private JSlider popularitySlider;
@@ -71,8 +127,12 @@ public class Draft extends JFrame {
     private DefaultTableModel recTableModel;
     private JLabel recStatusLabel;
 
-    // Calculator Controls
-    private JRadioButton studentRadio, individualRadio, duoRadio, familyRadio;
+    // Calculator Controls (Interactive Cards)
+    private RoundedPanel studentCard, individualCard, duoCard, familyCard;
+    private String selectedTier = "Individual";
+    private double selectedBasePrice = 10.99;
+    private int selectedAccounts = 1;
+
     private JComboBox<String> billingCycleCombo, currencyCombo;
     private JCheckBox hifiCheckBox, offlineCheckBox;
     private JTextField promoTextField;
@@ -84,19 +144,18 @@ public class Draft extends JFrame {
     private JLabel totalTracksLabel;
 
     public Draft() {
-        super("Spotify Interactive System - LDCW6123 Project");
+        super("Spotify System - LDCW6123 Desktop App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1100, 720);
-        setMinimumSize(new Dimension(950, 620));
+        setSize(1180, 760);
+        setMinimumSize(new Dimension(1020, 680));
         setLocationRelativeTo(null);
 
-        // Set global UI defaults for dark theme
+        // Anti-aliased text rendering globally
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
+
         setupDarkThemeDefaults();
-
-        // Load CSV Data from data/dataset.csv or dataset.csv
         loadDataset("data/dataset.csv");
-
-        // Build UI Layout
         initUI();
     }
 
@@ -105,13 +164,20 @@ public class Draft extends JFrame {
         UIManager.put("OptionPane.background", DARK_BG);
         UIManager.put("OptionPane.messageForeground", TEXT_WHITE);
         UIManager.put("Label.foreground", TEXT_WHITE);
+        UIManager.put("ComboBox.background", INPUT_BG);
+        UIManager.put("ComboBox.foreground", TEXT_WHITE);
+        UIManager.put("ComboBox.selectionBackground", CARD_HOVER_BG);
+        UIManager.put("ComboBox.selectionForeground", SPOTIFY_GREEN);
+        UIManager.put("TextField.background", INPUT_BG);
+        UIManager.put("TextField.foreground", TEXT_WHITE);
+        UIManager.put("TextField.caretForeground", SPOTIFY_GREEN);
     }
 
     private void initUI() {
         Container container = getContentPane();
         container.setLayout(new BorderLayout());
 
-        // Left Sidebar Navigation
+        // Left Sidebar
         JPanel sidebar = createSidebar();
         container.add(sidebar, BorderLayout.WEST);
 
@@ -128,6 +194,9 @@ public class Draft extends JFrame {
         // Bottom Status Bar
         JPanel statusBar = createStatusBar();
         container.add(statusBar, BorderLayout.SOUTH);
+
+        // Default selection state
+        switchNavTab("REC");
     }
 
     // ==========================================
@@ -137,45 +206,68 @@ public class Draft extends JFrame {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(SIDEBAR_BG);
-        sidebar.setPreferredSize(new Dimension(240, 0));
-        sidebar.setBorder(BorderFactory.createEmptyBorder(20, 15, 20, 15));
+        sidebar.setPreferredSize(new Dimension(250, 0));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(25, 20, 25, 20));
 
         // Brand Logo & Header
-        JLabel logoLabel = new JLabel("Spotify System");
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        logoLabel.setForeground(SPOTIFY_GREEN);
-        logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        logoPanel.setBackground(SIDEBAR_BG);
+        logoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subLabel = new JLabel("LDCW6123 Group Project");
+        JLabel logoIcon = new JLabel("🟢 ");
+        logoIcon.setFont(new Font("Segoe UI", Font.PLAIN, 22));
+
+        JLabel logoLabel = new JLabel("Spotify");
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        logoLabel.setForeground(TEXT_WHITE);
+
+        logoPanel.add(logoIcon);
+        logoPanel.add(logoLabel);
+
+        JLabel subLabel = new JLabel("  LDCW6123 Group Project");
         subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         subLabel.setForeground(TEXT_MUTED);
         subLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        sidebar.add(logoLabel);
+        sidebar.add(logoPanel);
         sidebar.add(subLabel);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
+        sidebar.add(Box.createRigidArea(new Dimension(0, 35)));
 
         // Navigation Buttons
-        JButton navRecBtn = createNavButton("🎵  Recommendation Assistant", "REC");
-        JButton navCalcBtn = createNavButton("💳  Subscription Calculator", "CALC");
-        JButton navDataBtn = createNavButton("📊  Track Dataset Explorer", "DATA");
+        navRecBtn = createNavButton("🎵   Recommendation Assistant", "REC");
+        navCalcBtn = createNavButton("💳   Subscription Calculator", "CALC");
+        navDataBtn = createNavButton("📊   Track Dataset Explorer", "DATA");
 
         sidebar.add(navRecBtn);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(Box.createRigidArea(new Dimension(0, 12)));
         sidebar.add(navCalcBtn);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(Box.createRigidArea(new Dimension(0, 12)));
         sidebar.add(navDataBtn);
 
         sidebar.add(Box.createVerticalGlue());
 
-        // Footer info in sidebar
-        JLabel footerInfo = new JLabel("<html><body style='width: 170px; color: #888888; font-size: 10px;'>"
-                + "<b>Course:</b> LDCW6123<br>"
-                + "<b>Tech:</b> Java Swing GUI<br>"
-                + "<b>Version:</b> 2.0 (Interactive)"
+        // Footer info card
+        RoundedPanel infoCard = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
+        infoCard.setLayout(new BoxLayout(infoCard, BoxLayout.Y_AXIS));
+        infoCard.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        infoCard.setMaximumSize(new Dimension(210, 80));
+        infoCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel infoTitle = new JLabel("SYSTEM INFO");
+        infoTitle.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        infoTitle.setForeground(SPOTIFY_GREEN);
+
+        JLabel infoBody = new JLabel("<html><body style='color:#A7A7A7; font-size:10px;'>"
+                + "Course: LDCW6123<br>"
+                + "Engine: Java Swing Dark GUI<br>"
+                + "Dataset: Kaggle Spotify Tracks"
                 + "</body></html>");
-        footerInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(footerInfo);
+
+        infoCard.add(infoTitle);
+        infoCard.add(Box.createRigidArea(new Dimension(0, 4)));
+        infoCard.add(infoBody);
+
+        sidebar.add(infoCard);
 
         return sidebar;
     }
@@ -183,116 +275,128 @@ public class Draft extends JFrame {
     private JButton createNavButton(String text, String cardName) {
         JButton btn = new JButton(text);
         btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setForeground(TEXT_WHITE);
-        btn.setBackground(CARD_BG);
+        btn.setForeground(TEXT_MUTED);
+        btn.setBackground(SIDEBAR_BG);
         btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_GRAY, 1),
-                BorderFactory.createEmptyBorder(12, 15, 12, 15)
-        ));
-        btn.setMaximumSize(new Dimension(210, 45));
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        btn.setMaximumSize(new Dimension(210, 48));
         btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         btn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                btn.setBackground(CARD_HOVER_BG);
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(SPOTIFY_GREEN, 1),
-                        BorderFactory.createEmptyBorder(12, 15, 12, 15)
-                ));
+                if (!btn.getForeground().equals(SPOTIFY_GREEN)) {
+                    btn.setForeground(TEXT_WHITE);
+                }
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                btn.setBackground(CARD_BG);
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ACCENT_GRAY, 1),
-                        BorderFactory.createEmptyBorder(12, 15, 12, 15)
-                ));
+                if (!btn.getForeground().equals(SPOTIFY_GREEN)) {
+                    btn.setForeground(TEXT_MUTED);
+                }
             }
         });
 
-        btn.addActionListener(e -> cardLayout.show(mainContentPanel, cardName));
+        btn.addActionListener(e -> {
+            switchNavTab(cardName);
+            cardLayout.show(mainContentPanel, cardName);
+        });
         return btn;
+    }
+
+    private void switchNavTab(String activeCard) {
+        navRecBtn.setForeground("REC".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
+        navCalcBtn.setForeground("CALC".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
+        navDataBtn.setForeground("DATA".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
     }
 
     // ==========================================
     // PANEL 1: MUSIC RECOMMENDATION ASSISTANT
     // ==========================================
     private JPanel createRecommendationPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
-        // Top Header & Controls Panel
+        // Top Header
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBackground(DARK_BG);
 
         JLabel titleLabel = new JLabel("Music Recommendation Assistant");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(TEXT_WHITE);
 
-        JLabel descLabel = new JLabel("Filter Spotify songs by your preferred genre, minimum popularity score, or artist name.");
+        JLabel descLabel = new JLabel("Personalized track recommendations based on audio genre preferences and popularity rating filters.");
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setForeground(TEXT_MUTED);
 
         topPanel.add(titleLabel);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        topPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         topPanel.add(descLabel);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        topPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Control Filters Row
-        JPanel filterRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        filterRow.setBackground(CARD_BG);
-        filterRow.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_GRAY, 1),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
+        // Filter Controls Rounded Card
+        RoundedPanel filterCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
+        filterCard.setLayout(new FlowLayout(FlowLayout.LEFT, 18, 12));
 
         // Genre Selector
-        filterRow.add(new JLabel("Genre:"));
+        JLabel genreLbl = new JLabel("Genre:");
+        genreLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        genreLbl.setForeground(TEXT_MUTED);
+        filterCard.add(genreLbl);
+
         Vector<String> genreList = new Vector<>();
         genreList.add("All Genres");
         genreList.addAll(availableGenres);
         genreComboBox = new JComboBox<>(genreList);
-        genreComboBox.setPreferredSize(new Dimension(140, 32));
-        filterRow.add(genreComboBox);
+        genreComboBox.setPreferredSize(new Dimension(150, 34));
+        filterCard.add(genreComboBox);
 
         // Popularity Slider
-        filterRow.add(new JLabel("Min Popularity:"));
+        JLabel popLbl = new JLabel("  Min Popularity:");
+        popLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        popLbl.setForeground(TEXT_MUTED);
+        filterCard.add(popLbl);
+
         popularitySlider = new JSlider(0, 100, 50);
         popularitySlider.setBackground(CARD_BG);
         popularitySlider.setForeground(SPOTIFY_GREEN);
-        popularitySlider.setPreferredSize(new Dimension(130, 40));
-        popularitySlider.setMajorTickSpacing(50);
-        popularitySlider.setPaintTicks(true);
-        popularitySlider.setPaintLabels(true);
-        filterRow.add(popularitySlider);
+        popularitySlider.setPreferredSize(new Dimension(130, 38));
+        filterCard.add(popularitySlider);
 
         // Search Input
-        filterRow.add(new JLabel("Search:"));
+        JLabel searchLbl = new JLabel("  Search:");
+        searchLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        searchLbl.setForeground(TEXT_MUTED);
+        filterCard.add(searchLbl);
+
         searchTextField = new JTextField(12);
-        searchTextField.setPreferredSize(new Dimension(140, 32));
-        filterRow.add(searchTextField);
+        searchTextField.setPreferredSize(new Dimension(140, 34));
+        searchTextField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)
+        ));
+        filterCard.add(searchTextField);
 
         // Action Buttons
         JButton filterBtn = new JButton("Search Tracks");
-        stylePrimaryButton(filterBtn);
+        stylePillButton(filterBtn, SPOTIFY_GREEN, Color.BLACK);
         filterBtn.addActionListener(e -> applyRecommendationFilter());
-        filterRow.add(filterBtn);
+        filterCard.add(filterBtn);
 
-        JButton surpriseBtn = new JButton("🎲 Surprise Me!");
-        styleSecondaryButton(surpriseBtn);
+        JButton surpriseBtn = new JButton("🎲 Surprise Me");
+        stylePillButton(surpriseBtn, CARD_HOVER_BG, TEXT_WHITE);
         surpriseBtn.addActionListener(e -> pickRandomRecommendation());
-        filterRow.add(surpriseBtn);
+        filterCard.add(surpriseBtn);
 
-        topPanel.add(filterRow);
+        topPanel.add(filterCard);
         panel.add(topPanel, BorderLayout.NORTH);
 
-        // Center Table of Results
-        String[] columnNames = {"#", "Track Title", "Artist", "Album", "Genre", "Popularity", "Duration"};
+        // Center Table Panel
+        String[] columnNames = {"#", "Track Title", "Artist", "Album", "Genre", "Popularity Rating", "Duration"};
         recTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
@@ -301,9 +405,12 @@ public class Draft extends JFrame {
         JTable recTable = new JTable(recTableModel);
         styleTable(recTable);
 
+        // Custom Popularity Progress Bar Column Renderer!
+        recTable.getColumnModel().getColumn(5).setCellRenderer(new PopularityBarRenderer());
+
         JScrollPane scrollPane = new JScrollPane(recTable);
         scrollPane.getViewport().setBackground(DARK_BG);
-        scrollPane.setBorder(BorderFactory.createLineBorder(ACCENT_GRAY));
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
         panel.add(scrollPane, BorderLayout.CENTER);
 
         // Bottom Status Info
@@ -312,9 +419,7 @@ public class Draft extends JFrame {
         recStatusLabel.setForeground(TEXT_MUTED);
         panel.add(recStatusLabel, BorderLayout.SOUTH);
 
-        // Populate initial table
         applyRecommendationFilter();
-
         return panel;
     }
 
@@ -340,18 +445,18 @@ public class Draft extends JFrame {
                 totalPop += track.popularity;
                 recTableModel.addRow(new Object[]{
                         count,
-                        track.title,
+                        "🎵  " + track.title,
                         track.artist,
                         track.album,
                         track.genre.toUpperCase(),
-                        track.popularity + " / 100",
+                        track.popularity, // Passed as Integer for custom Renderer
                         track.getFormattedDuration()
                 });
             }
         }
 
         double avgPop = count > 0 ? (double) totalPop / count : 0.0;
-        recStatusLabel.setText(String.format("Found %d recommendations for genre '%s' (Min Pop: %d) | Avg Popularity: %.1f",
+        recStatusLabel.setText(String.format("Displaying %d recommendations for genre '%s' (Min Pop: %d) | Avg Score: %.1f/100",
                 count, selectedGenre, minPopularity, avgPop));
     }
 
@@ -363,15 +468,58 @@ public class Draft extends JFrame {
         recTableModel.setRowCount(0);
         recTableModel.addRow(new Object[]{
                 1,
-                randomTrack.title,
+                "🎵  " + randomTrack.title,
                 randomTrack.artist,
                 randomTrack.album,
                 randomTrack.genre.toUpperCase(),
-                randomTrack.popularity + " / 100",
+                randomTrack.popularity,
                 randomTrack.getFormattedDuration()
         });
 
-        recStatusLabel.setText("🎲 Surprise Pick: \"" + randomTrack.title + "\" by " + randomTrack.artist + " (" + randomTrack.genre + ")");
+        recStatusLabel.setText("🎲 Surprise Pick: \"" + randomTrack.title + "\" by " + randomTrack.artist + " [" + randomTrack.genre.toUpperCase() + "]");
+    }
+
+    // ==========================================
+    // CUSTOM TABLE POPULARITY BAR RENDERER
+    // ==========================================
+    public static class PopularityBarRenderer extends JPanel implements TableCellRenderer {
+        private JProgressBar progressBar;
+        private JLabel scoreLabel;
+
+        public PopularityBarRenderer() {
+            setLayout(new BorderLayout(8, 0));
+            setOpaque(true);
+            setBackground(CARD_BG);
+
+            progressBar = new JProgressBar(0, 100);
+            progressBar.setForeground(SPOTIFY_GREEN);
+            progressBar.setBackground(INPUT_BG);
+            progressBar.setBorderPainted(false);
+            progressBar.setPreferredSize(new Dimension(80, 10));
+
+            scoreLabel = new JLabel("0");
+            scoreLabel.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            scoreLabel.setForeground(TEXT_WHITE);
+            scoreLabel.setPreferredSize(new Dimension(30, 20));
+
+            add(progressBar, BorderLayout.CENTER);
+            add(scoreLabel, BorderLayout.EAST);
+            setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            int pop = (value instanceof Integer) ? (Integer) value : 50;
+            progressBar.setValue(pop);
+            scoreLabel.setText(pop + "");
+
+            if (isSelected) {
+                setBackground(CARD_SELECTED_BG);
+            } else {
+                setBackground(row % 2 == 0 ? CARD_BG : DARK_BG);
+            }
+            return this;
+        }
     }
 
     // ==========================================
@@ -380,7 +528,7 @@ public class Draft extends JFrame {
     private JPanel createCalculatorPanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
         // Top Header
         JPanel headerPanel = new JPanel();
@@ -388,195 +536,215 @@ public class Draft extends JFrame {
         headerPanel.setBackground(DARK_BG);
 
         JLabel titleLabel = new JLabel("Subscription Fare Calculator");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(TEXT_WHITE);
 
-        JLabel descLabel = new JLabel("Calculate precise Spotify plan pricing based on account tier, duration, regional taxes, and add-ons.");
+        JLabel descLabel = new JLabel("Select an account tier card and configure regional tax, billing cycles, and optional audio add-ons.");
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setForeground(TEXT_MUTED);
 
         headerPanel.add(titleLabel);
-        headerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        headerPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         headerPanel.add(descLabel);
         panel.add(headerPanel, BorderLayout.NORTH);
 
-        // Split Input & Output Grid
-        JPanel centerGrid = new JPanel(new GridLayout(1, 2, 20, 0));
+        // Center Split Layout
+        JPanel centerGrid = new JPanel(new GridLayout(1, 2, 25, 0));
         centerGrid.setBackground(DARK_BG);
 
-        // Left Panel: Form Controls
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
-        formPanel.setBackground(CARD_BG);
-        formPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_GRAY, 1),
-                BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
+        // Left Config Panel
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+        leftPanel.setBackground(DARK_BG);
 
-        JLabel planHeader = new JLabel("1. Select Plan Tier");
-        planHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        planHeader.setForeground(SPOTIFY_GREEN);
-        formPanel.add(planHeader);
-        formPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        JLabel tierHeader = new JLabel("1. Select Plan Tier");
+        tierHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        tierHeader.setForeground(SPOTIFY_GREEN);
+        leftPanel.add(tierHeader);
+        leftPanel.add(Box.createRigidArea(new Dimension(0, 12)));
 
-        ButtonGroup planGroup = new ButtonGroup();
-        studentRadio = createRadioButton("Student Tier (1 Account - $5.99/mo)");
-        individualRadio = createRadioButton("Individual Tier (1 Account - $10.99/mo)");
-        duoRadio = createRadioButton("Duo Tier (2 Accounts - $14.99/mo)");
-        familyRadio = createRadioButton("Family Tier (6 Accounts - $16.99/mo)");
+        // Interactive 2x2 Plan Tier Cards
+        JPanel cardsGrid = new JPanel(new GridLayout(2, 2, 12, 12));
+        cardsGrid.setBackground(DARK_BG);
+        cardsGrid.setMaximumSize(new Dimension(600, 170));
 
-        individualRadio.setSelected(true);
+        studentCard = createPlanCard("Student", "$5.99 / mo", "1 Verified Account", 5.99, 1);
+        individualCard = createPlanCard("Individual", "$10.99 / mo", "1 Premium Account", 10.99, 1);
+        duoCard = createPlanCard("Duo", "$14.99 / mo", "2 Premium Accounts", 14.99, 2);
+        familyCard = createPlanCard("Family", "$16.99 / mo", "Up to 6 Accounts", 16.99, 6);
 
-        planGroup.add(studentRadio);
-        planGroup.add(individualRadio);
-        planGroup.add(duoRadio);
-        planGroup.add(familyRadio);
+        cardsGrid.add(studentCard);
+        cardsGrid.add(individualCard);
+        cardsGrid.add(duoCard);
+        cardsGrid.add(familyCard);
 
-        formPanel.add(studentRadio);
-        formPanel.add(individualRadio);
-        formPanel.add(duoRadio);
-        formPanel.add(familyRadio);
+        leftPanel.add(cardsGrid);
+        leftPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        // Config Options Panel
+        RoundedPanel optCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
+        optCard.setLayout(new BoxLayout(optCard, BoxLayout.Y_AXIS));
+        optCard.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
 
-        JLabel cycleHeader = new JLabel("2. Billing Cycle & Region");
-        cycleHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        cycleHeader.setForeground(SPOTIFY_GREEN);
-        formPanel.add(cycleHeader);
-        formPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        JLabel configHeader = new JLabel("2. Billing Frequency & Currency");
+        configHeader.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        configHeader.setForeground(TEXT_WHITE);
+        optCard.add(configHeader);
+        optCard.add(Box.createRigidArea(new Dimension(0, 12)));
 
         JPanel cycleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         cycleRow.setBackground(CARD_BG);
-        cycleRow.add(new JLabel("Cycle:"));
-        billingCycleCombo = new JComboBox<>(new String[]{"Monthly", "Annual (Save 16.6% / 2 Months Free)"});
+        cycleRow.add(new JLabel("Billing Cycle:"));
+        billingCycleCombo = new JComboBox<>(new String[]{"Monthly Billing", "Annual Billing (Save 16.6% / 2 Mos Free)"});
+        billingCycleCombo.addActionListener(e -> calculateSubscriptionFare());
         cycleRow.add(billingCycleCombo);
-        formPanel.add(cycleRow);
+        optCard.add(cycleRow);
 
-        formPanel.add(Box.createRigidArea(new Dimension(0, 8)));
+        optCard.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        JPanel currencyRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        currencyRow.setBackground(CARD_BG);
-        currencyRow.add(new JLabel("Currency:"));
+        JPanel currRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        currRow.setBackground(CARD_BG);
+        currRow.add(new JLabel("Region Currency:"));
         currencyCombo = new JComboBox<>(new String[]{"USD ($)", "EUR (€)", "GBP (£)", "MYR (RM)"});
-        currencyRow.add(currencyCombo);
-        formPanel.add(currencyRow);
+        currencyCombo.addActionListener(e -> calculateSubscriptionFare());
+        currRow.add(currencyCombo);
+        optCard.add(currRow);
 
-        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        optCard.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        JLabel addonHeader = new JLabel("3. Optional Features & Promo");
-        addonHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
-        addonHeader.setForeground(SPOTIFY_GREEN);
-        formPanel.add(addonHeader);
-        formPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        JLabel addonHeader = new JLabel("3. Add-ons & Promo Code");
+        addonHeader.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        addonHeader.setForeground(TEXT_WHITE);
+        optCard.add(addonHeader);
+        optCard.add(Box.createRigidArea(new Dimension(0, 8)));
 
         hifiCheckBox = new JCheckBox("Hi-Fi Lossless Audio Upgrade (+15%)");
         hifiCheckBox.setBackground(CARD_BG);
         hifiCheckBox.setForeground(TEXT_WHITE);
+        hifiCheckBox.addActionListener(e -> calculateSubscriptionFare());
 
-        offlineCheckBox = new JCheckBox("Extra Multi-Device Offline Storage (+$1.99/mo)");
+        offlineCheckBox = new JCheckBox("Extra Storage & Device Sync (+$1.99/mo)");
         offlineCheckBox.setBackground(CARD_BG);
         offlineCheckBox.setForeground(TEXT_WHITE);
+        offlineCheckBox.addActionListener(e -> calculateSubscriptionFare());
 
-        formPanel.add(hifiCheckBox);
-        formPanel.add(offlineCheckBox);
+        optCard.add(hifiCheckBox);
+        optCard.add(offlineCheckBox);
 
-        formPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        optCard.add(Box.createRigidArea(new Dimension(0, 10)));
 
         JPanel promoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         promoRow.setBackground(CARD_BG);
         promoRow.add(new JLabel("Promo Code:"));
         promoTextField = new JTextField(8);
         promoRow.add(promoTextField);
-        JLabel promoHint = new JLabel("(Try: STUDENT10)");
-        promoHint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        promoHint.setForeground(TEXT_MUTED);
-        promoRow.add(promoHint);
-        formPanel.add(promoRow);
 
-        formPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        JButton applyPromoBtn = new JButton("Apply");
+        stylePillButton(applyPromoBtn, CARD_HOVER_BG, SPOTIFY_GREEN);
+        applyPromoBtn.addActionListener(e -> calculateSubscriptionFare());
+        promoRow.add(applyPromoBtn);
 
-        JButton calcButton = new JButton("Calculate Total Fare");
-        stylePrimaryButton(calcButton);
-        calcButton.addActionListener(e -> calculateSubscriptionFare());
-        formPanel.add(calcButton);
+        optCard.add(promoRow);
 
-        centerGrid.add(formPanel);
+        leftPanel.add(optCard);
+        centerGrid.add(leftPanel);
 
-        // Right Panel: Invoice Summary Card
-        JPanel invoicePanel = new JPanel(new BorderLayout(10, 10));
-        invoicePanel.setBackground(CARD_BG);
-        invoicePanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ACCENT_GRAY, 1),
-                BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
+        // Right Invoice Summary Card
+        RoundedPanel invoiceCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
+        invoiceCard.setLayout(new BorderLayout(15, 15));
+        invoiceCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         JLabel summaryTitle = new JLabel("Fare Breakdown & Invoice");
-        summaryTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        summaryTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
         summaryTitle.setForeground(TEXT_WHITE);
-        invoicePanel.add(summaryTitle, BorderLayout.NORTH);
+        invoiceCard.add(summaryTitle, BorderLayout.NORTH);
 
         invoiceTextArea = new JTextArea();
         invoiceTextArea.setFont(new Font("Consolas", Font.PLAIN, 13));
         invoiceTextArea.setBackground(DARK_BG);
         invoiceTextArea.setForeground(TEXT_WHITE);
         invoiceTextArea.setEditable(false);
-        invoiceTextArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        invoicePanel.add(new JScrollPane(invoiceTextArea), BorderLayout.CENTER);
+        invoiceTextArea.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        invoiceCard.add(new JScrollPane(invoiceTextArea), BorderLayout.CENTER);
 
-        totalCostLabel = new JLabel("Total Fare: $0.00");
-        totalCostLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        totalCostLabel = new JLabel("Total Fare: $10.99");
+        totalCostLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
         totalCostLabel.setForeground(SPOTIFY_GREEN);
         totalCostLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        invoicePanel.add(totalCostLabel, BorderLayout.SOUTH);
+        invoiceCard.add(totalCostLabel, BorderLayout.SOUTH);
 
-        centerGrid.add(invoicePanel);
+        centerGrid.add(invoiceCard);
         panel.add(centerGrid, BorderLayout.CENTER);
 
-        // Initial Calculation
+        // Highlight default selected card (Individual)
+        updateCardHighlights();
         calculateSubscriptionFare();
 
         return panel;
     }
 
-    private JRadioButton createRadioButton(String text) {
-        JRadioButton rb = new JRadioButton(text);
-        rb.setBackground(CARD_BG);
-        rb.setForeground(TEXT_WHITE);
-        rb.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        rb.setFocusPainted(false);
-        return rb;
+    private RoundedPanel createPlanCard(String name, String price, String sub, double basePrice, int accounts) {
+        RoundedPanel card = new RoundedPanel(14, CARD_BG, BORDER_COLOR);
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JLabel nameLbl = new JLabel(name);
+        nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        nameLbl.setForeground(TEXT_WHITE);
+
+        JLabel priceLbl = new JLabel(price);
+        priceLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        priceLbl.setForeground(SPOTIFY_GREEN);
+
+        JLabel subLbl = new JLabel(sub);
+        subLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        subLbl.setForeground(TEXT_MUTED);
+
+        card.add(nameLbl);
+        card.add(Box.createRigidArea(new Dimension(0, 2)));
+        card.add(priceLbl);
+        card.add(Box.createRigidArea(new Dimension(0, 2)));
+        card.add(subLbl);
+
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                selectedTier = name;
+                selectedBasePrice = basePrice;
+                selectedAccounts = accounts;
+                updateCardHighlights();
+                calculateSubscriptionFare();
+            }
+        });
+
+        return card;
+    }
+
+    private void updateCardHighlights() {
+        studentCard.setBorderColor("Student".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
+        studentCard.setBackgroundColor("Student".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+
+        individualCard.setBorderColor("Individual".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
+        individualCard.setBackgroundColor("Individual".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+
+        duoCard.setBorderColor("Duo".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
+        duoCard.setBackgroundColor("Duo".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+
+        familyCard.setBorderColor("Family".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
+        familyCard.setBackgroundColor("Family".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
     }
 
     private void calculateSubscriptionFare() {
-        double baseMonthlyPrice = 10.99;
-        String tierName = "Individual";
-        int accountCount = 1;
-
-        if (studentRadio.isSelected()) {
-            baseMonthlyPrice = 5.99;
-            tierName = "Student";
-            accountCount = 1;
-        } else if (duoRadio.isSelected()) {
-            baseMonthlyPrice = 14.99;
-            tierName = "Duo";
-            accountCount = 2;
-        } else if (familyRadio.isSelected()) {
-            baseMonthlyPrice = 16.99;
-            tierName = "Family";
-            accountCount = 6;
-        }
-
         boolean isAnnual = billingCycleCombo.getSelectedIndex() == 1;
-        double monthsToBill = isAnnual ? 10.0 : 1.0; // 2 months free for annual
-        double baseFare = baseMonthlyPrice * monthsToBill;
+        double monthsToBill = isAnnual ? 10.0 : 1.0;
+        double baseFare = selectedBasePrice * monthsToBill;
 
-        // Add-ons
         double hifiFee = hifiCheckBox.isSelected() ? (baseFare * 0.15) : 0.0;
         double offlineFee = offlineCheckBox.isSelected() ? (1.99 * (isAnnual ? 12 : 1)) : 0.0;
 
         double subtotal = baseFare + hifiFee + offlineFee;
 
-        // Promo Discount
         double promoDiscount = 0.0;
         String promoCode = promoTextField.getText().trim();
         if ("STUDENT10".equalsIgnoreCase(promoCode)) {
@@ -584,12 +752,9 @@ public class Draft extends JFrame {
         }
 
         double discountedSubtotal = subtotal - promoDiscount;
-
-        // Tax (6% estimated SST / VAT)
         double tax = discountedSubtotal * 0.06;
         double totalFare = discountedSubtotal + tax;
 
-        // Multi-currency conversion
         String currencySymbol = "$";
         double exchangeRate = 1.0;
         int currIndex = currencyCombo.getSelectedIndex();
@@ -598,25 +763,23 @@ public class Draft extends JFrame {
         else if (currIndex == 3) { currencySymbol = "RM"; exchangeRate = 4.70; }
 
         double finalConvertedTotal = totalFare * exchangeRate;
-        double perUserCost = finalConvertedTotal / accountCount;
-
-        DecimalFormat df = new DecimalFormat("0.02");
+        double perUserCost = finalConvertedTotal / selectedAccounts;
 
         StringBuilder sb = new StringBuilder();
         sb.append("=========================================\n");
         sb.append("      SPOTIFY SUBSCRIPTION INVOICE       \n");
         sb.append("=========================================\n\n");
-        sb.append(String.format("Plan Tier          : %s (%d Account%s)\n", tierName, accountCount, accountCount > 1 ? "s" : ""));
+        sb.append(String.format("Plan Tier          : %s (%d Account%s)\n", selectedTier, selectedAccounts, selectedAccounts > 1 ? "s" : ""));
         sb.append(String.format("Billing Cycle      : %s\n", isAnnual ? "Annual (12 Mos / Pay 10)" : "Monthly"));
-        sb.append(String.format("Base Plan Rate     : %s%.2f\n", currencySymbol, baseMonthlyPrice * exchangeRate));
+        sb.append(String.format("Base Rate / Month  : %s%.2f\n", currencySymbol, selectedBasePrice * exchangeRate));
         sb.append(String.format("Base Duration Rate : %s%.2f\n\n", currencySymbol, baseFare * exchangeRate));
 
         sb.append("--- Add-ons & Adjustments ---\n");
         if (hifiCheckBox.isSelected()) {
-            sb.append(String.format(" + Hi-Fi Audio (15%s) : %s%.2f\n", "%", currencySymbol, hifiFee * exchangeRate));
+            sb.append(String.format(" + Hi-Fi Audio (15%%) : %s%.2f\n", currencySymbol, hifiFee * exchangeRate));
         }
         if (offlineCheckBox.isSelected()) {
-            sb.append(String.format(" + Extra Storage    : %s%.2f\n", currencySymbol, offlineFee * exchangeRate));
+            sb.append(String.format(" + Extra Device Sync : %s%.2f\n", currencySymbol, offlineFee * exchangeRate));
         }
         if (promoDiscount > 0) {
             sb.append(String.format(" - Promo (STUDENT10): -%s%.2f\n", currencySymbol, promoDiscount * exchangeRate));
@@ -625,8 +788,8 @@ public class Draft extends JFrame {
         sb.append(String.format("Est. Tax (6%% SST)  : %s%.2f\n", currencySymbol, tax * exchangeRate));
         sb.append("-----------------------------------------\n");
         sb.append(String.format("TOTAL FARE         : %s%.2f %s\n", currencySymbol, finalConvertedTotal, isAnnual ? "/ year" : "/ month"));
-        if (accountCount > 1) {
-            sb.append(String.format("Cost Per User      : %s%.2f / user\n", currencySymbol, perUserCost));
+        if (selectedAccounts > 1) {
+            sb.append(String.format("Cost Per Account   : %s%.2f / user\n", currencySymbol, perUserCost));
         }
         sb.append("=========================================\n");
 
@@ -635,12 +798,12 @@ public class Draft extends JFrame {
     }
 
     // ==========================================
-    // PANEL 3: DATASET & TRACK MANAGER
+    // PANEL 3: DATASET EXPLORER
     // ==========================================
     private JPanel createDatasetPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
         // Top Header
         JPanel topPanel = new JPanel();
@@ -648,46 +811,46 @@ public class Draft extends JFrame {
         topPanel.setBackground(DARK_BG);
 
         JLabel titleLabel = new JLabel("Spotify Track Dataset Explorer");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(TEXT_WHITE);
 
-        JLabel descLabel = new JLabel("View full loaded dataset, search entries, or add custom tracks dynamically.");
+        JLabel descLabel = new JLabel("Browse loaded track dataset from data/dataset.csv, add new entries, or reload dataset.");
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setForeground(TEXT_MUTED);
 
         topPanel.add(titleLabel);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        topPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         topPanel.add(descLabel);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        topPanel.add(Box.createRigidArea(new Dimension(0, 18)));
 
-        // Button Toolbar
-        JPanel toolRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-        toolRow.setBackground(DARK_BG);
+        // Button Toolbar Card
+        RoundedPanel toolCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
+        toolCard.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
 
         JButton addTrackBtn = new JButton("➕ Add New Track");
-        stylePrimaryButton(addTrackBtn);
+        stylePillButton(addTrackBtn, SPOTIFY_GREEN, Color.BLACK);
         addTrackBtn.addActionListener(e -> showAddTrackDialog());
-        toolRow.add(addTrackBtn);
+        toolCard.add(addTrackBtn);
 
         JButton reloadBtn = new JButton("🔄 Reload CSV");
-        styleSecondaryButton(reloadBtn);
+        stylePillButton(reloadBtn, CARD_HOVER_BG, TEXT_WHITE);
         reloadBtn.addActionListener(e -> {
             loadDataset("data/dataset.csv");
             refreshDatasetTable();
             applyRecommendationFilter();
-            JOptionPane.showMessageDialog(this, "Dataset reloaded successfully from data/dataset.csv!", "Reload Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Dataset reloaded from data/dataset.csv!", "Reload Success", JOptionPane.INFORMATION_MESSAGE);
         });
-        toolRow.add(reloadBtn);
+        toolCard.add(reloadBtn);
 
-        totalTracksLabel = new JLabel("Total Tracks Loaded: " + trackDatabase.size());
+        totalTracksLabel = new JLabel("  Total Tracks Loaded: " + trackDatabase.size());
         totalTracksLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
         totalTracksLabel.setForeground(SPOTIFY_GREEN);
-        toolRow.add(totalTracksLabel);
+        toolCard.add(totalTracksLabel);
 
-        topPanel.add(toolRow);
+        topPanel.add(toolCard);
         panel.add(topPanel, BorderLayout.NORTH);
 
-        // Table View
+        // Table
         String[] columnNames = {"ID", "Track Title", "Artist", "Album", "Genre", "Popularity", "Duration (ms)"};
         datasetTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -699,11 +862,10 @@ public class Draft extends JFrame {
 
         JScrollPane scrollPane = new JScrollPane(datasetTable);
         scrollPane.getViewport().setBackground(DARK_BG);
-        scrollPane.setBorder(BorderFactory.createLineBorder(ACCENT_GRAY));
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
         panel.add(scrollPane, BorderLayout.CENTER);
 
         refreshDatasetTable();
-
         return panel;
     }
 
@@ -711,23 +873,23 @@ public class Draft extends JFrame {
         datasetTableModel.setRowCount(0);
         for (SpotifyTrack t : trackDatabase) {
             datasetTableModel.addRow(new Object[]{
-                    t.id, t.title, t.artist, t.album, t.genre, t.popularity, t.durationMs
+                    t.id, t.title, t.artist, t.album, t.genre.toUpperCase(), t.popularity, t.durationMs
             });
         }
         if (totalTracksLabel != null) {
-            totalTracksLabel.setText("Total Tracks Loaded: " + trackDatabase.size());
+            totalTracksLabel.setText("  Total Tracks Loaded: " + trackDatabase.size());
         }
     }
 
     private void showAddTrackDialog() {
         JDialog dialog = new JDialog(this, "Add New Spotify Track", true);
-        dialog.setSize(400, 380);
+        dialog.setSize(420, 400);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
-        JPanel form = new JPanel(new GridLayout(6, 2, 10, 10));
+        JPanel form = new JPanel(new GridLayout(6, 2, 12, 12));
         form.setBackground(CARD_BG);
-        form.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        form.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
         JTextField titleField = new JTextField();
         JTextField artistField = new JTextField();
@@ -746,7 +908,7 @@ public class Draft extends JFrame {
         dialog.add(form, BorderLayout.CENTER);
 
         JButton saveBtn = new JButton("Save Track");
-        stylePrimaryButton(saveBtn);
+        stylePillButton(saveBtn, SPOTIFY_GREEN, Color.BLACK);
         saveBtn.addActionListener(e -> {
             try {
                 String title = titleField.getText().trim();
@@ -790,17 +952,17 @@ public class Draft extends JFrame {
     private JPanel createStatusBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(SIDEBAR_BG);
-        bar.setPreferredSize(new Dimension(0, 28));
+        bar.setPreferredSize(new Dimension(0, 30));
         bar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, ACCENT_GRAY),
-                BorderFactory.createEmptyBorder(4, 15, 4, 15)
+                BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_COLOR),
+                BorderFactory.createEmptyBorder(6, 20, 6, 20)
         ));
 
-        JLabel leftStatus = new JLabel("● System Operational | CSV Dataset: data/dataset.csv");
+        JLabel leftStatus = new JLabel("● System Operational | Connected to data/dataset.csv");
         leftStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         leftStatus.setForeground(SPOTIFY_GREEN);
 
-        JLabel rightStatus = new JLabel("Spotify-Based System Project | LDCW6123");
+        JLabel rightStatus = new JLabel("Spotify Desktop App | LDCW6123");
         rightStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         rightStatus.setForeground(TEXT_MUTED);
 
@@ -812,35 +974,33 @@ public class Draft extends JFrame {
     // ==========================================
     // STYLING UTILITIES
     // ==========================================
-    private void stylePrimaryButton(JButton btn) {
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setBackground(SPOTIFY_GREEN);
-        btn.setForeground(Color.BLACK);
+    private void stylePillButton(JButton btn, Color bg, Color fg) {
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setBackground(bg);
+        btn.setForeground(fg);
         btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    }
-
-    private void styleSecondaryButton(JButton btn) {
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setBackground(ACCENT_GRAY);
-        btn.setForeground(TEXT_WHITE);
-        btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(bg, 1),
+                BorderFactory.createEmptyBorder(8, 18, 8, 18)
+        ));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     private void styleTable(JTable table) {
         table.setBackground(CARD_BG);
         table.setForeground(TEXT_WHITE);
-        table.setGridColor(ACCENT_GRAY);
-        table.setRowHeight(28);
+        table.setGridColor(BORDER_COLOR);
+        table.setRowHeight(36);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        table.setSelectionBackground(CARD_SELECTED_BG);
+        table.setSelectionForeground(SPOTIFY_GREEN);
 
         JTableHeader header = table.getTableHeader();
         header.setBackground(SIDEBAR_BG);
         header.setForeground(SPOTIFY_GREEN);
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setPreferredSize(new Dimension(0, 38));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
     }
 
     // ==========================================

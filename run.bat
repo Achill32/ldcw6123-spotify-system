@@ -15,16 +15,18 @@ if %errorlevel% neq 0 (
     exit /b
 )
 
-echo Compiling Java source files...
-javac Draft.java
+if not exist bin mkdir bin
+
+echo Compiling Java source files from src/ into bin/...
+javac -d bin src\Draft.java
 if %errorlevel% neq 0 (
-    echo [ERROR] Compilation failed! Please check Draft.java for errors.
+    echo [ERROR] Compilation failed! Please check src\Draft.java for errors.
     pause
     exit /b
 )
 
 echo Launching Spotify Desktop GUI Application...
-start javaw Draft
+start javaw -cp bin Draft
 
 echo App started successfully! You can close this window.
 timeout /t 3 >nul

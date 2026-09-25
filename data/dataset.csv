@@ -1,0 +1,41 @@
+track_id,artists,album_name,track_name,popularity,duration_ms,track_genre
+1,The Weeknd,After Hours,Blinding Lights,95,200040,pop
+2,Dua Lipa,Future Nostalgia,Levitating,88,203807,pop
+3,Harry Styles,Fine Line,Watermelon Sugar,85,174000,pop
+4,Taylor Swift,1989 (Taylor's Version),Blank Space,92,231833,pop
+5,Ed Sheeran,÷ (Divide),Shape of You,90,233712,pop
+6,Queen,A Night at the Opera,Bohemian Rhapsody,89,354320,rock
+7,Nirvana,Nevermind,Smells Like Teen Spirit,87,301160,rock
+8,AC/DC,Back in Black,Back in Black,86,255493,rock
+9,Fleetwood Mac,Rumours,Dreams,84,257800,rock
+10,Arctic Monkeys,AM,Do I Wanna Know?,88,272394,rock
+11,Eminem,The Eminem Show,Without Me,91,290320,hip-hop
+12,Drake,Scorpion,God's Plan,88,198973,hip-hop
+13,Kendrick Lamar,DAMN.,HUMBLE.,87,177000,hip-hop
+14,Travis Scott,ASTROWORLD,SICKO MODE,89,312820,hip-hop
+15,Kanye West,Graduation,Stronger,86,311867,hip-hop
+16,Vance Joy,Dream Your Life Away,Riptide,83,194240,acoustic
+17,Ed Sheeran,X,Photograph,85,258986,acoustic
+18,Jason Mraz,We Sing. We Dance. We Steal Things.,I'm Yours,84,242186,acoustic
+19,Passenger,All the Little Lights,Let Her Go,85,252507,acoustic
+20,Lumineers,The Lumineers,Ho Hey,81,163133,acoustic
+21,Miles Davis,Kind of Blue,So What,75,562000,jazz
+22,John Coltrane,Giant Steps,Giant Steps,72,283000,jazz
+23,Dave Brubeck,Time Out,Take Five,76,324000,jazz
+24,Chet Baker,Chet Baker Sings,My Funny Valentine,73,138000,jazz
+25,Norah Jones,Come Away With Me,Don't Know Why,78,186120,jazz
+26,Daft Punk,Random Access Memories,Get Lucky,84,248413,electronic
+27,Calvin Harris,Motion,Summer,83,222533,electronic
+28,Avicii,True,Wake Me Up,87,247426,electronic
+29,The Chainsmokers,Collage EP,Closer,86,244960,electronic
+30,Kygo,Cloud Nine,Firestone,80,273013,electronic
+31,Bruno Mars,24K Magic,That's What I Like,85,206666,r-n-b
+32,SZA,SOS,Kill Bill,92,153933,r-n-b
+33,Frank Ocean,Blonde,Pink + White,87,184516,r-n-b
+34,Alicia Keys,Songs in A Minor,Fallin',81,210200,r-n-b
+35,The Weeknd,Beauty Behind The Madness,The Hills,88,242253,r-n-b
+36,BTS,BE,Dynamite,88,199053,k-pop
+37,BLACKPINK,THE ALBUM,How You Like That,84,181240,k-pop
+38,NewJeans,Get Up,Super Shy,86,154746,k-pop
+39,TWICE,Eyes wide open,I CAN'T STOP ME,81,205493,k-pop
+40,Stray Kids,5-STAR,S-Class,82,195613,k-pop

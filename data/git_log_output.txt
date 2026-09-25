@@ -1,0 +1,5 @@
+* fc59f72 feat: add Git log viewer batch file (view_git_log.bat)
+* f000c8c feat: add Windows batch script launchers (run.bat)
+* 17f55a1 docs: add project setup guide and rubric requirements checklist
+* 6d33af2 feat: implement Spotify dark GUI desktop application in Java Swing
+* 17139da docs: add Kaggle Spotify dataset CSV (track_genre, popularity, duration)

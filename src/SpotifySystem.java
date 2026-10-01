@@ -4,27 +4,41 @@ import javax.swing.table.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.geom.*;
 import java.io.*;
 import java.util.*;
 import java.util.List;
+import java.text.DecimalFormat;
 
+/**
+ * Spotify Desktop System - LDCW6123 Group Project
+ * Refined Modern Desktop Application (Java Swing)
+ * 
+ * Features:
+ * - Spotify Dark Theme (#121212, #181818, #1DB954)
+ * - Custom Sleek Dark Scrollbars
+ * - Borderless Modern Table Header & Styled Rows
+ * - Graphical Anti-Aliased Popularity Pill Bar Renderer
+ * - Auto-detects & loads 'Spotify Dataset/train.csv' or 'data/dataset.csv'
+ * - Innovation Timeline applying Winston's Innovation Lifecycle Model
+ */
 public class SpotifySystem extends JFrame {
 
+    // --- Spotify Brand Color Palette ---
     public static final Color SPOTIFY_GREEN = new Color(29, 185, 84);
     public static final Color SPOTIFY_GREEN_HOVER = new Color(30, 215, 96);
-    public static final Color DARK_BG = new Color(18, 18, 18); // #121212
+    public static final Color DARK_BG = new Color(18, 18, 18);
     public static final Color SIDEBAR_BG = new Color(0, 0, 0);
-    public static final Color CARD_BG = new Color(24, 24, 24); // #181818
+    public static final Color CARD_BG = new Color(24, 24, 24);
     public static final Color CARD_HOVER_BG = new Color(38, 38, 38);
-    public static final Color CARD_SELECTED_BG = new Color(42, 42, 42); // #2a2a2a hover/select
+    public static final Color CARD_SELECTED_BG = new Color(45, 45, 45);
     public static final Color INPUT_BG = new Color(32, 32, 32);
     public static final Color TEXT_WHITE = new Color(255, 255, 255);
     public static final Color TEXT_MUTED = new Color(167, 167, 167);
     public static final Color BORDER_COLOR = new Color(38, 38, 38);
-    public static final Color TOP_NAV_BG = new Color(7, 7, 7);
-    public static final Color BOTTOM_BAR_BG = new Color(24, 24, 24);
 
+    /**
+     * Custom Anti-Aliased Rounded Panel
+     */
     public static class RoundedPanel extends JPanel {
         private int cornerRadius;
         private Color backgroundColor;
@@ -69,11 +83,14 @@ public class SpotifySystem extends JFrame {
         }
     }
 
+    /**
+     * Custom Dark ScrollBar UI
+     */
     public static class DarkScrollBarUI extends BasicScrollBarUI {
         @Override
         protected void configureScrollBarColors() {
-            this.thumbColor = new Color(83, 83, 83);
-            this.trackColor = new Color(0,0,0,0);
+            this.thumbColor = new Color(60, 60, 60);
+            this.trackColor = DARK_BG;
         }
 
         @Override
@@ -94,18 +111,21 @@ public class SpotifySystem extends JFrame {
             if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) return;
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(isThumbRollover() ? new Color(179, 179, 179) : thumbColor);
+            g2.setColor(isThumbRollover() ? new Color(100, 100, 100) : thumbColor);
             g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2, thumbBounds.width - 4, thumbBounds.height - 4, 8, 8);
             g2.dispose();
         }
 
         @Override
         protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
-            g.setColor(c.getBackground());
+            g.setColor(DARK_BG);
             g.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
         }
     }
 
+    /**
+     * Data Model representing a Spotify Track
+     */
     public static class SpotifyTrack {
         String id;
         String artist;
@@ -142,24 +162,24 @@ public class SpotifySystem extends JFrame {
     private CardLayout cardLayout;
     
     // Sidebar Navigation Buttons
-    private JPanel navRecRow, navCalcRow, navDataRow, navTimelineRow;
-    private JLabel navRecLbl, navCalcLbl, navDataLbl, navTimelineLbl;
+    private JButton navRecBtn, navCalcBtn, navDataBtn, navTimelineBtn;
 
     // Recommendation Controls
     private JComboBox<String> genreComboBox;
-    private String selectedPopularityRange = "All"; // Popularity phase button state
-    private List<JButton> popButtons = new ArrayList<>();
+    private int selectedPopMin = 0;
+    private int selectedPopMax = 100;
+    private String selectedPopLabel = "All";
+    private List<JButton> popPhaseButtons = new ArrayList<>();
     private JTextField searchTextField;
     private DefaultTableModel recTableModel;
     private JLabel recStatusLabel;
-    private JTable recTable;
-    private int hoveredRecRow = -1;
 
     // Calculator Controls
     private RoundedPanel studentCard, individualCard, duoCard, familyCard;
     private String selectedTier = "Individual";
     private double selectedBasePrice = 10.99;
     private int selectedAccounts = 1;
+
     private JComboBox<String> billingCycleCombo, currencyCombo;
     private JCheckBox hifiCheckBox, offlineCheckBox;
     private JTextField promoTextField;
@@ -169,15 +189,18 @@ public class SpotifySystem extends JFrame {
     // Dataset View
     private DefaultTableModel datasetTableModel;
     private JLabel totalTracksLabel;
-    private int hoveredDatasetRow = -1;
 
+    /**
+     * Main Constructor
+     */
     public SpotifySystem() {
-        super("Spotify");
+        super("Spotify System - LDCW6123 Desktop App");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 760);
         setMinimumSize(new Dimension(1020, 680));
         setLocationRelativeTo(null);
 
+        // Anti-aliased font rendering
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
 
@@ -186,6 +209,9 @@ public class SpotifySystem extends JFrame {
         initUI();
     }
 
+    /**
+     * Configures UIManager for Dark Theme
+     */
     private void setupDarkThemeDefaults() {
         UIManager.put("Panel.background", DARK_BG);
         UIManager.put("OptionPane.background", DARK_BG);
@@ -200,340 +226,89 @@ public class SpotifySystem extends JFrame {
         UIManager.put("TextField.caretForeground", SPOTIFY_GREEN);
     }
 
+    /**
+     * Initializes the main user interface
+     */
     private void initUI() {
         Container container = getContentPane();
         container.setLayout(new BorderLayout());
 
-        // Top Navigation Bar
-        container.add(createTopNavBar(), BorderLayout.NORTH);
-
-        // Main Layout (Sidebar + Content)
-        JPanel centerWrapper = new JPanel(new BorderLayout());
-        
+        // Left Sidebar Navigation
         JPanel sidebar = createSidebar();
-        centerWrapper.add(sidebar, BorderLayout.WEST);
+        container.add(sidebar, BorderLayout.WEST);
 
+        // Center Content Area (CardLayout)
         cardLayout = new CardLayout();
         mainContentPanel = new JPanel(cardLayout);
+
         mainContentPanel.add(createRecommendationPanel(), "REC");
         mainContentPanel.add(createCalculatorPanel(), "CALC");
         mainContentPanel.add(createDatasetPanel(), "DATA");
         mainContentPanel.add(createTimelinePanel(), "TIME");
 
-        centerWrapper.add(mainContentPanel, BorderLayout.CENTER);
-        container.add(centerWrapper, BorderLayout.CENTER);
+        container.add(mainContentPanel, BorderLayout.CENTER);
 
-        // Bottom Player Bar
-        container.add(createPlayerBar(), BorderLayout.SOUTH);
+        // Bottom Status Bar
+        JPanel statusBar = createStatusBar();
+        container.add(statusBar, BorderLayout.SOUTH);
 
         switchNavTab("REC");
     }
 
-    private JPanel createTopNavBar() {
-        JPanel navBar = new JPanel(new BorderLayout());
-        navBar.setBackground(TOP_NAV_BG);
-        navBar.setPreferredSize(new Dimension(0, 50));
-        navBar.setBorder(BorderFactory.createEmptyBorder(7, 20, 7, 20));
-
-        // Left: Back/Forward
-        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftPanel.setOpaque(false);
-        leftPanel.add(createCircleButton("◀"));
-        leftPanel.add(createCircleButton("▶"));
-        navBar.add(leftPanel, BorderLayout.WEST);
-
-        // Center: Search
-        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        centerPanel.setOpaque(false);
-        
-        RoundedPanel searchContainer = new RoundedPanel(20, new Color(36,36,36));
-        searchContainer.setPreferredSize(new Dimension(400, 36));
-        searchContainer.setLayout(new BorderLayout());
-        
-        JTextField searchField = new JTextField("What do you want to play?");
-        searchField.setForeground(TEXT_WHITE);
-        searchField.setBackground(new Color(36,36,36));
-        searchField.setCaretColor(TEXT_WHITE);
-        searchField.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
-        searchField.setOpaque(false);
-        searchField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (searchField.getText().equals("What do you want to play?")) {
-                    searchField.setText("");
-                }
-            }
-            @Override
-            public void focusLost(FocusEvent e) {
-                if (searchField.getText().isEmpty()) {
-                    searchField.setText("What do you want to play?");
-                }
-            }
-        });
-        // Wire to recommendation search
-        searchField.addActionListener(e -> {
-            String text = searchField.getText();
-            if (!text.equals("What do you want to play?")) {
-                searchTextField.setText(text);
-                applyRecommendationFilter();
-                switchNavTab("REC");
-                cardLayout.show(mainContentPanel, "REC");
-            }
-        });
-        
-        searchContainer.add(searchField, BorderLayout.CENTER);
-        centerPanel.add(searchContainer);
-        navBar.add(centerPanel, BorderLayout.CENTER);
-
-        // Right: Profile and subtle status
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
-        rightPanel.setOpaque(false);
-        
-        JLabel sysLabel = new JLabel("System Operational");
-        sysLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        sysLabel.setForeground(TEXT_MUTED);
-        rightPanel.add(sysLabel);
-
-        JPanel profileCircle = new RoundedPanel(28, SPOTIFY_GREEN);
-        profileCircle.setPreferredSize(new Dimension(32, 32));
-        profileCircle.setLayout(new GridBagLayout());
-        JLabel pLabel = new JLabel("U");
-        pLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        pLabel.setForeground(Color.BLACK);
-        profileCircle.add(pLabel);
-        rightPanel.add(profileCircle);
-
-        navBar.add(rightPanel, BorderLayout.EAST);
-        return navBar;
-    }
-
-    private JButton createCircleButton(String text) {
-        JButton btn = new JButton(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(getModel().isRollover() ? new Color(50,50,50) : new Color(42, 42, 42));
-                g2.fillOval(0, 0, getWidth(), getHeight());
-                g2.setColor(TEXT_WHITE);
-                FontMetrics fm = g2.getFontMetrics();
-                int x = (getWidth() - fm.stringWidth(getText())) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(getText(), x, y);
-                g2.dispose();
-            }
-        };
-        btn.setPreferredSize(new Dimension(32, 32));
-        btn.setContentAreaFilled(false);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
-
-    private JPanel createPlayerBar() {
-        JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(BOTTOM_BAR_BG);
-        bar.setPreferredSize(new Dimension(0, 72));
-        bar.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(40,40,40)));
-
-        // Left: Track Info
-        JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 12));
-        leftPanel.setOpaque(false);
-        leftPanel.setPreferredSize(new Dimension(300, 72));
-
-        RoundedPanel artPlaceholder = new RoundedPanel(4, new Color(51,51,51));
-        artPlaceholder.setPreferredSize(new Dimension(48, 48));
-        leftPanel.add(artPlaceholder);
-
-        JPanel textInfo = new JPanel();
-        textInfo.setLayout(new BoxLayout(textInfo, BoxLayout.Y_AXIS));
-        textInfo.setOpaque(false);
-        JLabel trackLbl = new JLabel("Blinding Lights");
-        trackLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        trackLbl.setForeground(TEXT_WHITE);
-        JLabel artistLbl = new JLabel("The Weeknd");
-        artistLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        artistLbl.setForeground(TEXT_MUTED);
-        textInfo.add(Box.createRigidArea(new Dimension(0, 4)));
-        textInfo.add(trackLbl);
-        textInfo.add(artistLbl);
-        leftPanel.add(textInfo);
-        bar.add(leftPanel, BorderLayout.WEST);
-
-        // Center: Controls
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        centerPanel.setOpaque(false);
-        
-        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 5));
-        btnRow.setOpaque(false);
-        btnRow.add(createIconButton("⇆", 20, TEXT_MUTED));
-        btnRow.add(createIconButton("⏮", 24, TEXT_WHITE));
-        btnRow.add(createPlayButton());
-        btnRow.add(createIconButton("⏭", 24, TEXT_WHITE));
-        btnRow.add(createIconButton("🔁", 20, TEXT_MUTED));
-        
-        JPanel progressRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        progressRow.setOpaque(false);
-        JLabel tStart = new JLabel("1:23");
-        tStart.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        tStart.setForeground(TEXT_MUTED);
-        
-        JPanel progressBar = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D)g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(60,60,60));
-                g2.fillRoundRect(0, getHeight()/2 - 2, getWidth(), 4, 4, 4);
-                g2.setColor(SPOTIFY_GREEN);
-                g2.fillRoundRect(0, getHeight()/2 - 2, (int)(getWidth()*0.4), 4, 4, 4);
-            }
-        };
-        progressBar.setPreferredSize(new Dimension(300, 10));
-        progressBar.setOpaque(false);
-
-        JLabel tEnd = new JLabel("3:20");
-        tEnd.setFont(new Font("Segoe UI", Font.PLAIN, 11));
-        tEnd.setForeground(TEXT_MUTED);
-        
-        progressRow.add(tStart);
-        progressRow.add(progressBar);
-        progressRow.add(tEnd);
-
-        centerPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        centerPanel.add(btnRow);
-        centerPanel.add(progressRow);
-        bar.add(centerPanel, BorderLayout.CENTER);
-
-        // Right: Volume
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 26));
-        rightPanel.setOpaque(false);
-        rightPanel.setPreferredSize(new Dimension(300, 72));
-        
-        JLabel volIcon = new JLabel("🔊");
-        volIcon.setForeground(TEXT_MUTED);
-        
-        JPanel volSlider = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D)g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(60,60,60));
-                g2.fillRoundRect(0, getHeight()/2 - 2, getWidth(), 4, 4, 4);
-                g2.setColor(TEXT_WHITE);
-                g2.fillRoundRect(0, getHeight()/2 - 2, (int)(getWidth()*0.7), 4, 4, 4);
-            }
-        };
-        volSlider.setPreferredSize(new Dimension(100, 10));
-        volSlider.setOpaque(false);
-        
-        rightPanel.add(volIcon);
-        rightPanel.add(volSlider);
-        bar.add(rightPanel, BorderLayout.EAST);
-
-        return bar;
-    }
-
-    private JLabel createIconButton(String symbol, int size, Color c) {
-        JLabel l = new JLabel(symbol);
-        l.setFont(new Font("Segoe UI Emoji", Font.PLAIN, size));
-        l.setForeground(c);
-        l.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return l;
-    }
-
-    private JButton createPlayButton() {
-        JButton btn = new JButton("▶") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(TEXT_WHITE);
-                g2.fillOval(0, 0, getWidth(), getHeight());
-                g2.setColor(Color.BLACK);
-                FontMetrics fm = g2.getFontMetrics();
-                int x = (getWidth() - fm.stringWidth("▶")) / 2 + 1;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString("▶", x, y);
-                g2.dispose();
-            }
-        };
-        btn.setPreferredSize(new Dimension(36, 36));
-        btn.setContentAreaFilled(false);
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
-
+    // ==========================================
+    // SIDEBAR NAVIGATION
+    // ==========================================
+    /**
+     * Creates the sidebar panel with navigation buttons and about info
+     * @return sidebar JPanel
+     */
     private JPanel createSidebar() {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(SIDEBAR_BG);
-        sidebar.setPreferredSize(new Dimension(260, 0));
-        sidebar.setBorder(BorderFactory.createEmptyBorder(20, 15, 25, 15));
+        sidebar.setPreferredSize(new Dimension(240, 0));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(25, 20, 25, 20));
 
         // Brand Header
         JLabel logoLabel = new JLabel("Spotify");
-        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         logoLabel.setForeground(TEXT_WHITE);
         logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subLabel = new JLabel("LDCW6123 Group Project");
+        subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        subLabel.setForeground(TEXT_MUTED);
+        subLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         sidebar.add(logoLabel);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 20)));
+        sidebar.add(subLabel);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 35)));
 
-        // "Your Library" Header
-        JPanel libraryRow = new JPanel(new BorderLayout());
-        libraryRow.setOpaque(false);
-        libraryRow.setMaximumSize(new Dimension(260, 30));
-        libraryRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
-        JLabel libLbl = new JLabel("Your Library");
-        libLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        libLbl.setForeground(TEXT_MUTED);
-        libraryRow.add(libLbl, BorderLayout.WEST);
-        
-        JLabel createLbl = new JLabel("+ Create");
-        createLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        createLbl.setForeground(TEXT_MUTED);
-        libraryRow.add(createLbl, BorderLayout.EAST);
-        
-        sidebar.add(libraryRow);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
+        // Navigation Buttons
+        navRecBtn = createNavButton("Recommendation Assistant", "REC");
+        navCalcBtn = createNavButton("Subscription Calculator", "CALC");
+        navDataBtn = createNavButton("Track Dataset Explorer", "DATA");
+        navTimelineBtn = createNavButton("Innovation Timeline", "TIME");
 
-        // Filter Pills Row
-        JPanel pillsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        pillsRow.setOpaque(false);
-        pillsRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        pillsRow.add(createSidebarPill("All", true));
-        pillsRow.add(createSidebarPill("Music", false));
-        pillsRow.add(createSidebarPill("Podcasts", false));
-        sidebar.add(pillsRow);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 15)));
+        sidebar.add(navRecBtn);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(navCalcBtn);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(navDataBtn);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+        sidebar.add(navTimelineBtn);
 
-        // Nav Rows
-        navRecRow = createNavRow("Recommendation Assistant", new Color(29, 185, 84), "REC");
-        navRecLbl = (JLabel) navRecRow.getComponent(2);
-        
-        navCalcRow = createNavRow("Subscription Calculator", new Color(45, 136, 255), "CALC");
-        navCalcLbl = (JLabel) navCalcRow.getComponent(2);
-        
-        navDataRow = createNavRow("Dataset Explorer", new Color(175, 40, 150), "DATA");
-        navDataLbl = (JLabel) navDataRow.getComponent(2);
-        
-        navTimelineRow = createNavRow("Innovation Timeline", new Color(255, 100, 55), "TIME");
-        navTimelineLbl = (JLabel) navTimelineRow.getComponent(2);
-
-        sidebar.add(navRecRow);
-        sidebar.add(navCalcRow);
-        sidebar.add(navDataRow);
-        sidebar.add(navTimelineRow);
         sidebar.add(Box.createVerticalGlue());
 
         // About Section
+        JSeparator sep = new JSeparator(SwingConstants.HORIZONTAL);
+        sep.setMaximumSize(new Dimension(200, 1));
+        sep.setForeground(BORDER_COLOR);
+        sep.setBackground(BORDER_COLOR);
+        sep.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sidebar.add(sep);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
+
         JLabel aboutLbl = new JLabel("About");
         aboutLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
         aboutLbl.setForeground(TEXT_MUTED);
@@ -548,11 +323,11 @@ public class SpotifySystem extends JFrame {
         aboutText.setLineWrap(true);
         aboutText.setWrapStyleWord(true);
         aboutText.setEditable(false);
-        aboutText.setMaximumSize(new Dimension(230, 60));
+        aboutText.setMaximumSize(new Dimension(200, 60));
         aboutText.setAlignmentX(Component.LEFT_ALIGNMENT);
         sidebar.add(aboutText);
-        
         sidebar.add(Box.createRigidArea(new Dimension(0, 5)));
+
         JLabel groupLbl = new JLabel("Group 1 • FCI7");
         groupLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         groupLbl.setForeground(SPOTIFY_GREEN);
@@ -562,188 +337,191 @@ public class SpotifySystem extends JFrame {
         return sidebar;
     }
 
-    private JButton createSidebarPill(String text, boolean active) {
+    /**
+     * Helper to create styled navigation buttons
+     */
+    private JButton createNavButton(String text, String cardName) {
         JButton btn = new JButton(text);
-        btn.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        btn.setBackground(active ? TEXT_WHITE : new Color(35,35,35));
-        btn.setForeground(active ? Color.BLACK : TEXT_WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setForeground(TEXT_MUTED);
+        btn.setBackground(SIDEBAR_BG);
         btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(active ? TEXT_WHITE : new Color(35,35,35), 1, true),
-            BorderFactory.createEmptyBorder(6, 12, 6, 12)
-        ));
+        btn.setHorizontalAlignment(SwingConstants.LEFT);
+        btn.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        btn.setMaximumSize(new Dimension(210, 46));
+        btn.setAlignmentX(Component.LEFT_ALIGNMENT);
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        return btn;
-    }
 
-    private JPanel createNavRow(String text, Color iconColor, String cardName) {
-        JPanel row = new JPanel();
-        row.setLayout(new BoxLayout(row, BoxLayout.X_AXIS));
-        row.setBackground(SIDEBAR_BG);
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        row.setMaximumSize(new Dimension(260, 48));
-        row.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        row.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        JPanel iconSquare = new JPanel();
-        iconSquare.setBackground(iconColor);
-        iconSquare.setMinimumSize(new Dimension(32, 32));
-        iconSquare.setPreferredSize(new Dimension(32, 32));
-        iconSquare.setMaximumSize(new Dimension(32, 32));
-        
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lbl.setForeground(TEXT_MUTED);
-
-        row.add(iconSquare);
-        row.add(Box.createRigidArea(new Dimension(12, 0)));
-        row.add(lbl);
-
-        row.addMouseListener(new MouseAdapter() {
+        btn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                row.setBackground(new Color(26,26,26)); // hover #1a1a1a
-                if (!lbl.getForeground().equals(TEXT_WHITE)) {
-                    lbl.setForeground(TEXT_WHITE);
+                if (!btn.getForeground().equals(SPOTIFY_GREEN)) {
+                    btn.setForeground(TEXT_WHITE);
                 }
             }
             @Override
             public void mouseExited(MouseEvent e) {
-                row.setBackground(SIDEBAR_BG);
-                if (!lbl.getForeground().equals(SPOTIFY_GREEN)) {
-                    lbl.setForeground(TEXT_MUTED);
+                if (!btn.getForeground().equals(SPOTIFY_GREEN)) {
+                    btn.setForeground(TEXT_MUTED);
                 }
-            }
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                switchNavTab(cardName);
-                cardLayout.show(mainContentPanel, cardName);
             }
         });
 
-        return row;
+        btn.addActionListener(e -> {
+            switchNavTab(cardName);
+            cardLayout.show(mainContentPanel, cardName);
+        });
+        return btn;
     }
 
     private void switchNavTab(String activeCard) {
-        navRecLbl.setForeground("REC".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
-        navCalcLbl.setForeground("CALC".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
-        navDataLbl.setForeground("DATA".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
-        navTimelineLbl.setForeground("TIME".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
+        navRecBtn.setForeground("REC".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
+        navCalcBtn.setForeground("CALC".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
+        navDataBtn.setForeground("DATA".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
+        navTimelineBtn.setForeground("TIME".equals(activeCard) ? SPOTIFY_GREEN : TEXT_MUTED);
     }
 
     // ==========================================
     // PANEL 1: MUSIC RECOMMENDATION ASSISTANT
     // ==========================================
+    /**
+     * Creates the Music Recommendation panel
+     */
     private JPanel createRecommendationPanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
-        panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
-        // Top Filter Area
+        // Top Header
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBackground(DARK_BG);
 
-        // Line 1: Genre
-        JPanel genreRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        genreRow.setOpaque(false);
+        JLabel titleLabel = new JLabel("Music Recommendation Assistant");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        titleLabel.setForeground(TEXT_WHITE);
+
+        JLabel descLabel = new JLabel("Personalized track recommendations based on audio genre preferences and popularity rating filters.");
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        descLabel.setForeground(TEXT_MUTED);
+
+        topPanel.add(titleLabel);
+        topPanel.add(Box.createRigidArea(new Dimension(0, 4)));
+        topPanel.add(descLabel);
+        topPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Filter Controls Card
+        RoundedPanel filterCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
+        filterCard.setLayout(new FlowLayout(FlowLayout.LEFT, 18, 12));
+
+        // Genre Selector
         JLabel genreLbl = new JLabel("Genre:");
-        genreLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        genreLbl.setForeground(TEXT_WHITE);
+        genreLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        genreLbl.setForeground(TEXT_MUTED);
+        filterCard.add(genreLbl);
+
         Vector<String> genreList = new Vector<>();
         genreList.add("All Genres");
         genreList.addAll(availableGenres);
         genreComboBox = new JComboBox<>(genreList);
-        genreComboBox.setPreferredSize(new Dimension(200, 32));
-        genreRow.add(genreLbl);
-        genreRow.add(genreComboBox);
+        genreComboBox.setPreferredSize(new Dimension(150, 34));
+        filterCard.add(genreComboBox);
 
-        // Line 2: Popularity
-        JPanel popRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        popRow.setOpaque(false);
-        JLabel popLbl = new JLabel("Popularity:");
-        popLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        popLbl.setForeground(TEXT_WHITE);
-        popRow.add(popLbl);
+        // Popularity Phase Buttons
+        JLabel popLbl = new JLabel("  Popularity:");
+        popLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        popLbl.setForeground(TEXT_MUTED);
+        filterCard.add(popLbl);
 
         String[] popRanges = {"All", "0-20", "20-40", "40-60", "60-80", "80-100"};
-        popButtons.clear();
-        for (String r : popRanges) {
-            JButton pb = new JButton(r);
-            pb.setFont(new Font("Segoe UI", Font.BOLD, 12));
-            pb.setFocusPainted(false);
-            pb.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            updatePopButtonStyle(pb, r.equals(selectedPopularityRange));
-            
-            pb.addActionListener(e -> {
-                selectedPopularityRange = r;
-                for (JButton b : popButtons) {
-                    updatePopButtonStyle(b, b.getText().equals(selectedPopularityRange));
+        int[][] popBounds = {{0, 100}, {0, 20}, {20, 40}, {40, 60}, {60, 80}, {80, 100}};
+
+        for (int i = 0; i < popRanges.length; i++) {
+            final int idx = i;
+            JButton phaseBtn = new JButton(popRanges[i]);
+            phaseBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            phaseBtn.setFocusPainted(false);
+            phaseBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            phaseBtn.setPreferredSize(new Dimension(popRanges[i].equals("All") ? 46 : 56, 30));
+            phaseBtn.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                    BorderFactory.createEmptyBorder(4, 8, 4, 8)
+            ));
+
+            // Default: "All" is selected
+            if (i == 0) {
+                phaseBtn.setBackground(SPOTIFY_GREEN);
+                phaseBtn.setForeground(Color.BLACK);
+            } else {
+                phaseBtn.setBackground(INPUT_BG);
+                phaseBtn.setForeground(TEXT_WHITE);
+            }
+
+            phaseBtn.addActionListener(e -> {
+                selectedPopMin = popBounds[idx][0];
+                selectedPopMax = popBounds[idx][1];
+                selectedPopLabel = popRanges[idx];
+
+                // Update button styles
+                for (JButton pb : popPhaseButtons) {
+                    pb.setBackground(INPUT_BG);
+                    pb.setForeground(TEXT_WHITE);
                 }
+                phaseBtn.setBackground(SPOTIFY_GREEN);
+                phaseBtn.setForeground(Color.BLACK);
+
+                applyRecommendationFilter();
             });
-            popButtons.add(pb);
-            popRow.add(pb);
+
+            popPhaseButtons.add(phaseBtn);
+            filterCard.add(phaseBtn);
         }
 
-        // Line 3: Search & Actions
-        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        actionRow.setOpaque(false);
-        searchTextField = new JTextField(20);
-        searchTextField.setPreferredSize(new Dimension(200, 32));
+        // Search Input
+        JLabel searchLbl = new JLabel("  Search:");
+        searchLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        searchLbl.setForeground(TEXT_MUTED);
+        filterCard.add(searchLbl);
+
+        searchTextField = new JTextField(12);
+        searchTextField.setPreferredSize(new Dimension(140, 34));
         searchTextField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(BORDER_COLOR, 1),
                 BorderFactory.createEmptyBorder(4, 10, 4, 10)
         ));
-        
+        filterCard.add(searchTextField);
+
+        // Action Buttons
         JButton filterBtn = new JButton("Search Tracks");
-        filterBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        filterBtn.setBackground(SPOTIFY_GREEN);
-        filterBtn.setForeground(Color.BLACK);
-        filterBtn.setFocusPainted(false);
-        filterBtn.setBorder(BorderFactory.createEmptyBorder(8, 20, 8, 20));
-        filterBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        stylePillButton(filterBtn, SPOTIFY_GREEN, Color.BLACK);
         filterBtn.addActionListener(e -> applyRecommendationFilter());
+        filterCard.add(filterBtn);
 
         JButton surpriseBtn = new JButton("Surprise Me");
-        surpriseBtn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        surpriseBtn.setBackground(DARK_BG);
-        surpriseBtn.setForeground(TEXT_WHITE);
-        surpriseBtn.setFocusPainted(false);
-        surpriseBtn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(TEXT_WHITE, 1),
-            BorderFactory.createEmptyBorder(7, 19, 7, 19)
-        ));
-        surpriseBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        stylePillButton(surpriseBtn, CARD_HOVER_BG, TEXT_WHITE);
         surpriseBtn.addActionListener(e -> pickRandomRecommendation());
+        filterCard.add(surpriseBtn);
 
-        actionRow.add(searchTextField);
-        actionRow.add(filterBtn);
-        actionRow.add(surpriseBtn);
-
-        topPanel.add(genreRow);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        topPanel.add(popRow);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        topPanel.add(actionRow);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        topPanel.add(filterCard);
         panel.add(topPanel, BorderLayout.NORTH);
 
         // Center Table Panel
-        String[] columnNames = {"#", "Track Title", "Artist", "Album", "Genre", "Popularity", "Duration"};
+        String[] columnNames = {"#", "Track Title", "Artist", "Album", "Genre", "Popularity Rating", "Duration"};
         recTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) { return false; }
         };
 
-        recTable = new JTable(recTableModel);
-        styleTable(recTable, true);
-        
-        recTable.getColumnModel().getColumn(0).setPreferredWidth(40);
-        recTable.getColumnModel().getColumn(0).setMaxWidth(40);
-        
+        JTable recTable = new JTable(recTableModel);
+        styleTable(recTable);
+
+        // Custom Popularity Progress Bar Renderer
+        recTable.getColumnModel().getColumn(5).setCellRenderer(new PopularityBarRenderer());
+
         JScrollPane scrollPane = createDarkScrollPane(recTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
+        // Bottom Status Info
         recStatusLabel = new JLabel("Ready. Select options above to view recommendations.");
         recStatusLabel.setFont(new Font("Segoe UI", Font.ITALIC, 12));
         recStatusLabel.setForeground(TEXT_MUTED);
@@ -752,32 +530,19 @@ public class SpotifySystem extends JFrame {
         applyRecommendationFilter();
         return panel;
     }
-    
-    private void updatePopButtonStyle(JButton btn, boolean active) {
-        btn.setBackground(active ? SPOTIFY_GREEN : new Color(51,51,51));
-        btn.setForeground(active ? Color.BLACK : TEXT_WHITE);
-        btn.setBorder(BorderFactory.createEmptyBorder(6, 14, 6, 14));
-    }
 
     private void applyRecommendationFilter() {
         recTableModel.setRowCount(0);
         String selectedGenre = (String) genreComboBox.getSelectedItem();
         String searchKeyword = searchTextField.getText().trim().toLowerCase();
 
-        int popMin = 0, popMax = 100;
-        if (!selectedPopularityRange.equals("All")) {
-            String[] parts = selectedPopularityRange.split("-");
-            popMin = Integer.parseInt(parts[0]);
-            popMax = Integer.parseInt(parts[1]);
-        }
-
         int count = 0;
         int totalPop = 0;
-        int limit = 500; 
+        int limit = 500; // Limit displayed rows for high performance
 
         for (SpotifyTrack track : trackDatabase) {
             boolean genreMatch = "All Genres".equals(selectedGenre) || track.genre.equalsIgnoreCase(selectedGenre);
-            boolean popMatch = track.popularity >= popMin && track.popularity <= popMax;
+            boolean popMatch = track.popularity >= selectedPopMin && track.popularity <= selectedPopMax;
             boolean searchMatch = searchKeyword.isEmpty() ||
                     track.title.toLowerCase().contains(searchKeyword) ||
                     track.artist.toLowerCase().contains(searchKeyword) ||
@@ -800,8 +565,8 @@ public class SpotifySystem extends JFrame {
         }
 
         double avgPop = count > 0 ? (double) totalPop / count : 0.0;
-        recStatusLabel.setText(String.format("Displaying %d recommendations for genre '%s' (Pop: %s) | Avg Score: %.1f/100",
-                count, selectedGenre, selectedPopularityRange, avgPop));
+        recStatusLabel.setText(String.format("Displaying %d recommendations for genre '%s' (Popularity: %s) | Avg Score: %.1f/100",
+                count, selectedGenre, selectedPopLabel, avgPop));
     }
 
     private void pickRandomRecommendation() {
@@ -824,8 +589,62 @@ public class SpotifySystem extends JFrame {
     }
 
     // ==========================================
+    // CUSTOM TABLE POPULARITY RENDERER (Clean Pill)
+    // ==========================================
+    public static class PopularityBarRenderer extends JPanel implements TableCellRenderer {
+        private int popValue = 0;
+
+        public PopularityBarRenderer() {
+            setOpaque(true);
+            setBackground(CARD_BG);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            popValue = (value instanceof Integer) ? (Integer) value : 50;
+            if (isSelected) {
+                setBackground(CARD_SELECTED_BG);
+            } else {
+                setBackground(row % 2 == 0 ? CARD_BG : DARK_BG);
+            }
+            return this;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            int w = getWidth() - 55;
+            int h = 10;
+            int x = 10;
+            int y = (getHeight() - h) / 2;
+
+            // Background Track
+            g2.setColor(INPUT_BG);
+            g2.fillRoundRect(x, y, w, h, 6, 6);
+
+            // Fill Bar
+            int fillW = (int) (w * (popValue / 100.0));
+            g2.setColor(SPOTIFY_GREEN);
+            g2.fillRoundRect(x, y, fillW, h, 6, 6);
+
+            // Text Label
+            g2.setColor(TEXT_WHITE);
+            g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            g2.drawString(String.valueOf(popValue), x + w + 12, y + 9);
+
+            g2.dispose();
+        }
+    }
+
+    // ==========================================
     // PANEL 2: SUBSCRIPTION FARE CALCULATOR
     // ==========================================
+    /**
+     * Creates the Subscription Calculator Panel
+     */
     private JPanel createCalculatorPanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
@@ -864,6 +683,7 @@ public class SpotifySystem extends JFrame {
         leftPanel.add(tierHeader);
         leftPanel.add(Box.createRigidArea(new Dimension(0, 12)));
 
+        // Interactive 2x2 Plan Tier Cards
         JPanel cardsGrid = new JPanel(new GridLayout(2, 2, 12, 12));
         cardsGrid.setBackground(DARK_BG);
         cardsGrid.setMaximumSize(new Dimension(600, 170));
@@ -881,6 +701,7 @@ public class SpotifySystem extends JFrame {
         leftPanel.add(cardsGrid);
         leftPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
+        // Config Options Panel
         RoundedPanel optCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
         optCard.setLayout(new BoxLayout(optCard, BoxLayout.Y_AXIS));
         optCard.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
@@ -939,10 +760,7 @@ public class SpotifySystem extends JFrame {
         promoRow.add(promoTextField);
 
         JButton applyPromoBtn = new JButton("Apply");
-        applyPromoBtn.setBackground(CARD_HOVER_BG);
-        applyPromoBtn.setForeground(SPOTIFY_GREEN);
-        applyPromoBtn.setFocusPainted(false);
-        applyPromoBtn.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        stylePillButton(applyPromoBtn, CARD_HOVER_BG, SPOTIFY_GREEN);
         applyPromoBtn.addActionListener(e -> calculateSubscriptionFare());
         promoRow.add(applyPromoBtn);
 
@@ -1108,11 +926,15 @@ public class SpotifySystem extends JFrame {
     // ==========================================
     // PANEL 3: DATASET EXPLORER
     // ==========================================
+    /**
+     * Creates the Dataset Explorer Panel
+     */
     private JPanel createDatasetPanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
         panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
+        // Top Header
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBackground(DARK_BG);
@@ -1130,27 +952,17 @@ public class SpotifySystem extends JFrame {
         topPanel.add(descLabel);
         topPanel.add(Box.createRigidArea(new Dimension(0, 18)));
 
-        JPanel toolCard = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
-        toolCard.setBackground(DARK_BG);
-        
+        // Button Toolbar Card
+        RoundedPanel toolCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
+        toolCard.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 10));
+
         JButton addTrackBtn = new JButton("Add New Track");
-        addTrackBtn.setBackground(SPOTIFY_GREEN);
-        addTrackBtn.setForeground(Color.BLACK);
-        addTrackBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        addTrackBtn.setFocusPainted(false);
-        addTrackBtn.setBorder(BorderFactory.createEmptyBorder(8, 18, 8, 18));
+        stylePillButton(addTrackBtn, SPOTIFY_GREEN, Color.BLACK);
         addTrackBtn.addActionListener(e -> showAddTrackDialog());
         toolCard.add(addTrackBtn);
 
         JButton reloadBtn = new JButton("Reload Dataset");
-        reloadBtn.setBackground(DARK_BG);
-        reloadBtn.setForeground(TEXT_WHITE);
-        reloadBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        reloadBtn.setFocusPainted(false);
-        reloadBtn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(TEXT_WHITE, 1),
-            BorderFactory.createEmptyBorder(7, 17, 7, 17)
-        ));
+        stylePillButton(reloadBtn, CARD_HOVER_BG, TEXT_WHITE);
         reloadBtn.addActionListener(e -> {
             loadDatasetAuto();
             refreshDatasetTable();
@@ -1167,6 +979,7 @@ public class SpotifySystem extends JFrame {
         topPanel.add(toolCard);
         panel.add(topPanel, BorderLayout.NORTH);
 
+        // Table
         String[] columnNames = {"ID", "Track Title", "Artist", "Album", "Genre", "Popularity", "Duration (ms)"};
         datasetTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -1174,7 +987,7 @@ public class SpotifySystem extends JFrame {
         };
 
         JTable datasetTable = new JTable(datasetTableModel);
-        styleTable(datasetTable, false);
+        styleTable(datasetTable);
 
         JScrollPane scrollPane = createDarkScrollPane(datasetTable);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -1226,10 +1039,7 @@ public class SpotifySystem extends JFrame {
         dialog.add(form, BorderLayout.CENTER);
 
         JButton saveBtn = new JButton("Save Track");
-        saveBtn.setBackground(SPOTIFY_GREEN);
-        saveBtn.setForeground(Color.BLACK);
-        saveBtn.setFocusPainted(false);
-        saveBtn.setBorder(BorderFactory.createEmptyBorder(8,18,8,18));
+        stylePillButton(saveBtn, SPOTIFY_GREEN, Color.BLACK);
         saveBtn.addActionListener(e -> {
             try {
                 String title = titleField.getText().trim();
@@ -1280,11 +1090,15 @@ public class SpotifySystem extends JFrame {
     // ==========================================
     // PANEL 4: INNOVATION TIMELINE
     // ==========================================
+    /**
+     * Creates the Innovation Timeline Panel
+     */
     private JPanel createTimelinePanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(DARK_BG);
         panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
+        // NORTH: Title
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBackground(DARK_BG);
@@ -1302,13 +1116,16 @@ public class SpotifySystem extends JFrame {
         topPanel.add(descLabel);
         panel.add(topPanel, BorderLayout.NORTH);
 
+        // CENTER: Split LEFT (list) and RIGHT (detail view)
         JPanel centerGrid = new JPanel(new GridLayout(1, 2, 25, 0));
         centerGrid.setBackground(DARK_BG);
 
+        // LEFT: List of Stages
         JPanel listPanel = new JPanel();
         listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
         listPanel.setBackground(DARK_BG);
 
+        // Detailed data
         String[] stageNames = {
             "Scientific Competence", "Ideation", "Prototype", 
             "Supervening Social Necessity", "Invention", "Diffusion"
@@ -1328,10 +1145,15 @@ public class SpotifySystem extends JFrame {
         
         String[] stageDetails = {
             "The technological foundations for music streaming existed before Spotify. During the 1990s, Fraunhofer IIS developed MP3 audio compression, allowing digital music to be represented using much less data than uncompressed audio. In 1995, RealNetworks introduced RealAudio, enabling audio to be played over the internet while data was still being delivered. Apple's iTunes Music Store (2003) demonstrated that people would pay for legal digital music downloads. These existing technologies — audio compression, internet delivery, and digital music distribution — formed the scientific competence base that made Spotify possible.",
+            
             "In April 2006, Daniel Ek and Martin Lorentzon founded Spotify with a clear vision: combine the vast music choice that file-sharing services like Napster and Kazaa offered with the polished, legal experience of Apple's iTunes. The key insight was that listeners wanted to explore lots of music and start listening straight away — without buying individual tracks or downloading potentially incomplete files. The music industry also needed a solution: rights holders wanted control over how their recordings were used and a way to earn revenue from digital distribution. Spotify's founders proposed a licensed service where someone could type a song name, press play, and hear it almost instantly.",
+            
             "Spotify's engineering team had to transform the concept into working technology. The team built an early desktop application where the primary design goal was making playback feel extremely fast — a listener could begin hearing music almost immediately after selecting a track. This required developing a custom streaming architecture that prioritized speed over traditional download-then-play approaches. The company used existing technologies like MP3 compression and internet streaming protocols but assembled them into a system specifically designed around quick access and instant playback. The prototype had to work alongside legal and business requirements, since Spotify needed licensing agreements with music rights holders before it could offer their recordings.",
+            
             "Before Spotify, the way people listened to music was fundamentally changing. Internet adoption was growing, and music piracy through file-sharing was increasingly common. Listeners wanted quick, easy access to large catalogues of music, but legal options were limited to purchasing individual tracks or albums. Meanwhile, music industry revenues were declining as physical sales dropped and unauthorized file-sharing provided free (but often poor-quality) alternatives. This created a social demand for a service that could provide convenient, legal music access. The need wasn't just technological — it was a societal shift in how people expected to consume media.",
+            
             "Spotify launched in October 2008 in six European countries: Finland, France, Norway, Spain, Sweden, and the United Kingdom. Crucially, the company had secured major global music licensing deals in 2007 — before launch — ensuring the service was fully legal. The initial service was free to listeners and supported by advertising, with a premium ad-free tier also available. Invention in Winston's model isn't simply about creating something new; society, markets, and institutions help decide which technologies are supported and accepted. In Spotify's case, user demand, music licensing agreements, and market support all helped transform the prototype into a real, functioning service.",
+            
             "After its European launch, Spotify expanded rapidly. Mobile access arrived in 2009, allowing users to listen while travelling or exercising. The U.S. launch came in 2011, followed by Southeast Asia in 2013. By 2023, Spotify had over 200 million subscribers across 180+ markets. The service also expanded beyond music: in 2019, Spotify acquired podcast companies Gimlet and Anchor, creating spin-off services. Meanwhile, traditional music downloads became increasingly redundant as streaming replaced individual file purchases — though physical formats like vinyl continued to grow. However, Spotify also faced the 'law of suppression of radical potential': licensing agreements with labels sometimes restricted content availability, such as Universal Music Group's 2017 deal limiting new album access for free-tier users."
         };
         
@@ -1344,6 +1166,7 @@ public class SpotifySystem extends JFrame {
             "Diffusion shows how technology spreads through society, while suppression forces (like institutional agreements) can constrain its radical potential."
         };
 
+        // RIGHT: Detail view components
         RoundedPanel detailCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
         detailCard.setLayout(new BorderLayout(15, 15));
         detailCard.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
@@ -1389,6 +1212,7 @@ public class SpotifySystem extends JFrame {
         insightCard.add(insightLbl, BorderLayout.CENTER);
         detailCard.add(insightCard, BorderLayout.SOUTH);
 
+        // Create cards and add logic
         List<RoundedPanel> cards = new ArrayList<>();
         
         for (int i = 0; i < 6; i++) {
@@ -1439,6 +1263,7 @@ public class SpotifySystem extends JFrame {
             listPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         }
         
+        // Select first by default
         cards.get(0).setBorderColor(SPOTIFY_GREEN);
         cards.get(0).setBackgroundColor(CARD_SELECTED_BG);
 
@@ -1450,6 +1275,32 @@ public class SpotifySystem extends JFrame {
         panel.add(centerGrid, BorderLayout.CENTER);
 
         return panel;
+    }
+
+
+    // ==========================================
+    // BOTTOM STATUS BAR
+    // ==========================================
+    private JPanel createStatusBar() {
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.setBackground(SIDEBAR_BG);
+        bar.setPreferredSize(new Dimension(0, 30));
+        bar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_COLOR),
+                BorderFactory.createEmptyBorder(6, 20, 6, 20)
+        ));
+
+        JLabel leftStatus = new JLabel("System Operational | Dataset: " + loadedDatasetPath);
+        leftStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        leftStatus.setForeground(SPOTIFY_GREEN);
+
+        JLabel rightStatus = new JLabel("Spotify Desktop App | LDCW6123");
+        rightStatus.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        rightStatus.setForeground(TEXT_MUTED);
+
+        bar.add(leftStatus, BorderLayout.WEST);
+        bar.add(rightStatus, BorderLayout.EAST);
+        return bar;
     }
 
     // ==========================================
@@ -1466,76 +1317,35 @@ public class SpotifySystem extends JFrame {
         return sp;
     }
 
-    private void styleTable(JTable table, boolean isRecTable) {
-        table.setBackground(DARK_BG);
+    private void stylePillButton(JButton btn, Color bg, Color fg) {
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setBackground(bg);
+        btn.setForeground(fg);
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(bg, 1),
+                BorderFactory.createEmptyBorder(8, 18, 8, 18)
+        ));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    private void styleTable(JTable table) {
+        table.setBackground(CARD_BG);
         table.setForeground(TEXT_WHITE);
         table.setGridColor(BORDER_COLOR);
         table.setShowGrid(false);
         table.setIntercellSpacing(new Dimension(0, 0));
-        table.setRowHeight(44);
-        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setRowHeight(38);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         table.setSelectionBackground(CARD_SELECTED_BG);
         table.setSelectionForeground(SPOTIFY_GREEN);
-        
-        table.addMouseMotionListener(new MouseMotionAdapter() {
-            @Override
-            public void mouseMoved(MouseEvent e) {
-                int row = table.rowAtPoint(e.getPoint());
-                if (isRecTable) {
-                    if (row != hoveredRecRow) {
-                        hoveredRecRow = row;
-                        table.repaint();
-                    }
-                } else {
-                    if (row != hoveredDatasetRow) {
-                        hoveredDatasetRow = row;
-                        table.repaint();
-                    }
-                }
-            }
-        });
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (isRecTable) hoveredRecRow = -1;
-                else hoveredDatasetRow = -1;
-                table.repaint();
-            }
-        });
-
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                int hoverRow = isRecTable ? hoveredRecRow : hoveredDatasetRow;
-                
-                if (isSelected) {
-                    c.setBackground(CARD_SELECTED_BG);
-                } else if (row == hoverRow) {
-                    c.setBackground(CARD_SELECTED_BG);
-                } else {
-                    c.setBackground(row % 2 == 0 ? new Color(24,24,24) : new Color(18,18,18));
-                }
-                
-                if (column == table.getColumnCount() - 1) { // Duration
-                    setHorizontalAlignment(SwingConstants.RIGHT);
-                    setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 15));
-                } else {
-                    setHorizontalAlignment(SwingConstants.LEFT);
-                    setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
-                }
-                return c;
-            }
-        });
 
         JTableHeader header = table.getTableHeader();
         header.setBackground(DARK_BG);
-        header.setForeground(TEXT_MUTED);
+        header.setForeground(SPOTIFY_GREEN);
         header.setFont(new Font("Segoe UI", Font.BOLD, 12));
         header.setPreferredSize(new Dimension(0, 40));
-        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(51,51,51)));
-        
-        ((DefaultTableCellRenderer)header.getDefaultRenderer()).setHorizontalAlignment(JLabel.LEFT);
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_COLOR));
     }
 
     // ==========================================
@@ -1647,6 +1457,12 @@ public class SpotifySystem extends JFrame {
         }
     }
 
+    // ==========================================
+    // MAIN ENTRY POINT
+    // ==========================================
+    /**
+     * Application Entry Point
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             SpotifySystem app = new SpotifySystem();

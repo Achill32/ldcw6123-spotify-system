@@ -39,7 +39,7 @@ Digital Comp/
 
 ---
 
-## 🚀 How to Run the Application
+##  How to Run the Application
 
 ### Option 1: 1-Click Launch (Recommended)
 Double-click `Launch_Spotify_App.bat` in the project root. It will automatically compile `src/SpotifySystem.java` and start the GUI application.
@@ -53,7 +53,7 @@ java -cp bin SpotifySystem
 
 ---
 
-## 🌟 Key Application Features
+##  Key Application Features
 
 1. **Music Recommendation Assistant**:
    - Filter tracks by audio genre (Pop, Rock, Hip-Hop, Acoustic, Jazz, Electronic, R&B, K-Pop, etc.).
@@ -88,7 +88,7 @@ java -cp bin SpotifySystem
 
 ---
 
-## 📜 Git Version Control & Rubric Trace
+##  Git Version Control & Rubric Trace
 
 To regenerate the `git_log_output.txt` required for the submission PDF:
 ```cmd
@@ -101,7 +101,7 @@ git log --oneline --graph
 
 ---
 
-## 📋 Rubric Compliance Checklist
+
 
 - [x] **Program Logic & Functionality (10/10)**: Recommendation filtering, multi-tier fare calculation, dynamic dataset manipulation, and interactive timeline.
 - [x] **Relevance & Integration (10/10)**: Directly mapped to Brian Winston's model and the team's Part 1 research reports.

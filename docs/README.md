@@ -100,11 +100,3 @@ git log --oneline --graph
 ```
 
 ---
-
-
-
-- [x] **Program Logic & Functionality (10/10)**: Recommendation filtering, multi-tier fare calculation, dynamic dataset manipulation, and interactive timeline.
-- [x] **Relevance & Integration (10/10)**: Directly mapped to Brian Winston's model and the team's Part 1 research reports.
-- [x] **Code Quality & Style (5/5)**: Clean modular code with anti-aliasing, comprehensive Javadoc, and Spotify-themed UI palette.
-- [x] **User Experience & Testing (5/5)**: Input validation, active state highlights, error messaging, and responsive layouts.
-- [x] **Git Development Trace (10/10)**: 13+ staged commits documenting outlining, coding, testing, and UI refinements.

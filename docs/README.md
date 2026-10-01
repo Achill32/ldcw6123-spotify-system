@@ -1,6 +1,6 @@
 # Spotify Interactive Desktop System (LDCW6123)
 
-A Java Swing Desktop GUI Application developed for the **LDCW6123 - Fundamentals of Digital Competence for Programmer** group project (Multimedia University). The system connects to the group's research on **Spotify** modeled through **Brian Winston's Innovation Lifecycle Model**.
+A Java Swing Desktop GUI Application developed for the **LDCW6123 - Fundamentals of Digital Competence for Programmer** group project. The system connects to the group's research on **Spotify** modeled through **Brian Winston's Innovation Lifecycle Model**.
 
 ---
 

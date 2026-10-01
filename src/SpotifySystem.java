@@ -183,8 +183,9 @@ public class SpotifySystem extends JFrame {
     private JComboBox<String> billingCycleCombo, currencyCombo;
     private JCheckBox hifiCheckBox, offlineCheckBox;
     private JTextField promoTextField;
-    private JTextArea invoiceTextArea;
+    private JEditorPane invoiceHtmlPane;
     private JLabel totalCostLabel;
+    private JLabel perUserCostLabel;
 
     // Dataset View
     private DefaultTableModel datasetTableModel;
@@ -664,21 +665,21 @@ public class SpotifySystem extends JFrame {
         panel.setBackground(DARK_BG);
         panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
 
-        // Top Header
-        JPanel headerPanel = new JPanel();
-        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        // Top Header (Centered)
+        JPanel headerPanel = new JPanel(new GridLayout(2, 1, 0, 4));
         headerPanel.setBackground(DARK_BG);
+        headerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
 
-        JLabel titleLabel = new JLabel("Subscription Fare Calculator");
+        JLabel titleLabel = new JLabel("Subscription Fare Calculator", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(TEXT_WHITE);
 
-        JLabel descLabel = new JLabel("Select an account tier card and configure regional tax, billing cycles, and optional audio add-ons.");
+        JLabel descLabel = new JLabel("Select an account tier card and configure regional tax, billing cycles, and optional audio add-ons.", SwingConstants.CENTER);
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setForeground(TEXT_MUTED);
 
         headerPanel.add(titleLabel);
-        headerPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         headerPanel.add(descLabel);
         panel.add(headerPanel, BorderLayout.NORTH);
 
@@ -692,15 +693,17 @@ public class SpotifySystem extends JFrame {
         leftPanel.setBackground(DARK_BG);
 
         JLabel tierHeader = new JLabel("1. Select Plan Tier");
-        tierHeader.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        tierHeader.setFont(new Font("Segoe UI", Font.BOLD, 14));
         tierHeader.setForeground(SPOTIFY_GREEN);
+        tierHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
         leftPanel.add(tierHeader);
-        leftPanel.add(Box.createRigidArea(new Dimension(0, 12)));
+        leftPanel.add(Box.createRigidArea(new Dimension(0, 10)));
 
         // Interactive 2x2 Plan Tier Cards
         JPanel cardsGrid = new JPanel(new GridLayout(2, 2, 12, 12));
         cardsGrid.setBackground(DARK_BG);
-        cardsGrid.setMaximumSize(new Dimension(600, 170));
+        cardsGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cardsGrid.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
 
         studentCard = createPlanCard("Student", "$5.99 / mo", "1 Verified Account", 5.99, 1);
         individualCard = createPlanCard("Individual", "$10.99 / mo", "1 Premium Account", 10.99, 1);
@@ -713,101 +716,215 @@ public class SpotifySystem extends JFrame {
         cardsGrid.add(familyCard);
 
         leftPanel.add(cardsGrid);
-        leftPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        leftPanel.add(Box.createRigidArea(new Dimension(0, 16)));
 
         // Config Options Panel
         RoundedPanel optCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
         optCard.setLayout(new BoxLayout(optCard, BoxLayout.Y_AXIS));
         optCard.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
+        optCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        optCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, 275));
 
+        // Sub-section 2: Billing & Currency (2-column row)
         JLabel configHeader = new JLabel("2. Billing Frequency & Currency");
-        configHeader.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        configHeader.setForeground(TEXT_WHITE);
+        configHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        configHeader.setForeground(SPOTIFY_GREEN);
         optCard.add(configHeader);
-        optCard.add(Box.createRigidArea(new Dimension(0, 12)));
-
-        JPanel cycleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        cycleRow.setBackground(CARD_BG);
-        cycleRow.add(new JLabel("Billing Cycle:"));
-        billingCycleCombo = new JComboBox<>(new String[]{"Monthly Billing", "Annual Billing (Save 16.6% / 2 Mos Free)"});
-        billingCycleCombo.addActionListener(e -> calculateSubscriptionFare());
-        cycleRow.add(billingCycleCombo);
-        optCard.add(cycleRow);
-
-        optCard.add(Box.createRigidArea(new Dimension(0, 10)));
-
-        JPanel currRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        currRow.setBackground(CARD_BG);
-        currRow.add(new JLabel("Region Currency:"));
-        currencyCombo = new JComboBox<>(new String[]{"USD ($)", "EUR (€)", "GBP (£)", "MYR (RM)"});
-        currencyCombo.addActionListener(e -> calculateSubscriptionFare());
-        currRow.add(currencyCombo);
-        optCard.add(currRow);
-
-        optCard.add(Box.createRigidArea(new Dimension(0, 15)));
-
-        JLabel addonHeader = new JLabel("3. Add-ons & Promo Code");
-        addonHeader.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        addonHeader.setForeground(TEXT_WHITE);
-        optCard.add(addonHeader);
         optCard.add(Box.createRigidArea(new Dimension(0, 8)));
 
-        hifiCheckBox = new JCheckBox("Hi-Fi Lossless Audio Upgrade (+15%)");
+        JPanel gridRow = new JPanel(new GridLayout(1, 2, 14, 0));
+        gridRow.setOpaque(false);
+        gridRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 56));
+
+        // Billing Column
+        JPanel cycleCol = new JPanel();
+        cycleCol.setLayout(new BoxLayout(cycleCol, BoxLayout.Y_AXIS));
+        cycleCol.setOpaque(false);
+        JLabel cycleLbl = new JLabel("Billing Cycle");
+        cycleLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        cycleLbl.setForeground(TEXT_MUTED);
+        cycleCol.add(cycleLbl);
+        cycleCol.add(Box.createRigidArea(new Dimension(0, 4)));
+
+        billingCycleCombo = new JComboBox<>(new String[]{"Monthly Billing", "Annual Billing (Save 16.6% / 2 Mos Free)"});
+        billingCycleCombo.setPreferredSize(new Dimension(100, 32));
+        billingCycleCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        billingCycleCombo.addActionListener(e -> calculateSubscriptionFare());
+        cycleCol.add(billingCycleCombo);
+
+        // Currency Column
+        JPanel currCol = new JPanel();
+        currCol.setLayout(new BoxLayout(currCol, BoxLayout.Y_AXIS));
+        currCol.setOpaque(false);
+        JLabel currLbl = new JLabel("Region Currency");
+        currLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        currLbl.setForeground(TEXT_MUTED);
+        currCol.add(currLbl);
+        currCol.add(Box.createRigidArea(new Dimension(0, 4)));
+
+        currencyCombo = new JComboBox<>(new String[]{"USD ($)", "EUR (€)", "GBP (£)", "MYR (RM)"});
+        currencyCombo.setPreferredSize(new Dimension(100, 32));
+        currencyCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 32));
+        currencyCombo.addActionListener(e -> calculateSubscriptionFare());
+        currCol.add(currencyCombo);
+
+        gridRow.add(cycleCol);
+        gridRow.add(currCol);
+        optCard.add(gridRow);
+        optCard.add(Box.createRigidArea(new Dimension(0, 14)));
+
+        // Sub-section 3: Add-ons
+        JLabel addonHeader = new JLabel("3. Add-ons & Promo Code");
+        addonHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        addonHeader.setForeground(SPOTIFY_GREEN);
+        optCard.add(addonHeader);
+        optCard.add(Box.createRigidArea(new Dimension(0, 6)));
+
+        hifiCheckBox = new JCheckBox("  Hi-Fi Lossless Audio Upgrade (+15% Base Rate)");
         hifiCheckBox.setBackground(CARD_BG);
         hifiCheckBox.setForeground(TEXT_WHITE);
+        hifiCheckBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        hifiCheckBox.setFocusPainted(false);
+        hifiCheckBox.setCursor(new Cursor(Cursor.HAND_CURSOR));
         hifiCheckBox.addActionListener(e -> calculateSubscriptionFare());
 
-        offlineCheckBox = new JCheckBox("Extra Storage & Device Sync (+$1.99/mo)");
+        offlineCheckBox = new JCheckBox("  Extra Offline Storage & Multi-Device Sync (+$1.99/mo)");
         offlineCheckBox.setBackground(CARD_BG);
         offlineCheckBox.setForeground(TEXT_WHITE);
+        offlineCheckBox.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        offlineCheckBox.setFocusPainted(false);
+        offlineCheckBox.setCursor(new Cursor(Cursor.HAND_CURSOR));
         offlineCheckBox.addActionListener(e -> calculateSubscriptionFare());
 
         optCard.add(hifiCheckBox);
+        optCard.add(Box.createRigidArea(new Dimension(0, 2)));
         optCard.add(offlineCheckBox);
+        optCard.add(Box.createRigidArea(new Dimension(0, 12)));
 
-        optCard.add(Box.createRigidArea(new Dimension(0, 10)));
-
+        // Sub-section 4: Promo Code Row
         JPanel promoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         promoRow.setBackground(CARD_BG);
-        promoRow.add(new JLabel("Promo Code:"));
-        promoTextField = new JTextField(8);
+        promoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel promoLbl = new JLabel("Promo Code:");
+        promoLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        promoLbl.setForeground(TEXT_MUTED);
+        promoRow.add(promoLbl);
+
+        promoTextField = new JTextField(9);
+        promoTextField.setPreferredSize(new Dimension(100, 32));
+        promoTextField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER_COLOR, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
         promoRow.add(promoTextField);
 
         JButton applyPromoBtn = new JButton("Apply");
         stylePillButton(applyPromoBtn, CARD_HOVER_BG, SPOTIFY_GREEN);
+        applyPromoBtn.setPreferredSize(new Dimension(80, 32));
         applyPromoBtn.addActionListener(e -> calculateSubscriptionFare());
         promoRow.add(applyPromoBtn);
 
-        optCard.add(promoRow);
+        JLabel promoTip = new JLabel("(Code: STUDENT10 for 10% off)");
+        promoTip.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        promoTip.setForeground(TEXT_MUTED);
+        promoRow.add(promoTip);
 
+        optCard.add(promoRow);
         leftPanel.add(optCard);
+        leftPanel.add(Box.createVerticalGlue());
+
         centerGrid.add(leftPanel);
 
         // Right Invoice Summary Card
         RoundedPanel invoiceCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
-        invoiceCard.setLayout(new BorderLayout(15, 15));
-        invoiceCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        invoiceCard.setLayout(new BorderLayout(14, 14));
+        invoiceCard.setBorder(BorderFactory.createEmptyBorder(20, 22, 20, 22));
+
+        // Invoice Header
+        JPanel invHeader = new JPanel();
+        invHeader.setLayout(new BoxLayout(invHeader, BoxLayout.Y_AXIS));
+        invHeader.setBackground(CARD_BG);
 
         JLabel summaryTitle = new JLabel("Fare Breakdown & Invoice");
-        summaryTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        summaryTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         summaryTitle.setForeground(TEXT_WHITE);
-        invoiceCard.add(summaryTitle, BorderLayout.NORTH);
 
-        invoiceTextArea = new JTextArea();
-        invoiceTextArea.setFont(new Font("Consolas", Font.PLAIN, 13));
-        invoiceTextArea.setBackground(DARK_BG);
-        invoiceTextArea.setForeground(TEXT_WHITE);
-        invoiceTextArea.setEditable(false);
-        invoiceTextArea.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        invoiceCard.add(createDarkScrollPane(invoiceTextArea), BorderLayout.CENTER);
+        JLabel summarySub = new JLabel("Live itemized calculation based on selected plan and region.");
+        summarySub.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        summarySub.setForeground(TEXT_MUTED);
 
-        totalCostLabel = new JLabel("Total Fare: $10.99");
+        invHeader.add(summaryTitle);
+        invHeader.add(Box.createRigidArea(new Dimension(0, 3)));
+        invHeader.add(summarySub);
+        invoiceCard.add(invHeader, BorderLayout.NORTH);
+
+        // Center: Modern Styled HTML Invoice Pane
+        invoiceHtmlPane = new JEditorPane();
+        invoiceHtmlPane.setContentType("text/html");
+        invoiceHtmlPane.setEditable(false);
+        invoiceHtmlPane.setBackground(DARK_BG);
+        invoiceHtmlPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        invoiceHtmlPane.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+        JScrollPane htmlScroll = createDarkScrollPane(invoiceHtmlPane);
+        htmlScroll.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
+        invoiceCard.add(htmlScroll, BorderLayout.CENTER);
+
+        // Bottom Totals Card
+        JPanel bottomArea = new JPanel();
+        bottomArea.setLayout(new BoxLayout(bottomArea, BoxLayout.Y_AXIS));
+        bottomArea.setOpaque(false);
+
+        RoundedPanel totalBox = new RoundedPanel(12, INPUT_BG, BORDER_COLOR);
+        totalBox.setLayout(new BorderLayout(10, 6));
+        totalBox.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+
+        JPanel totalLeft = new JPanel();
+        totalLeft.setLayout(new BoxLayout(totalLeft, BoxLayout.Y_AXIS));
+        totalLeft.setOpaque(false);
+
+        JLabel totalLabelTitle = new JLabel("Total Fare Payable");
+        totalLabelTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        totalLabelTitle.setForeground(TEXT_MUTED);
+
+        perUserCostLabel = new JLabel("1 Account Included");
+        perUserCostLabel.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        perUserCostLabel.setForeground(SPOTIFY_GREEN);
+
+        totalLeft.add(totalLabelTitle);
+        totalLeft.add(Box.createRigidArea(new Dimension(0, 2)));
+        totalLeft.add(perUserCostLabel);
+
+        totalCostLabel = new JLabel("$10.99 / mo");
         totalCostLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
         totalCostLabel.setForeground(SPOTIFY_GREEN);
         totalCostLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        invoiceCard.add(totalCostLabel, BorderLayout.SOUTH);
 
+        totalBox.add(totalLeft, BorderLayout.WEST);
+        totalBox.add(totalCostLabel, BorderLayout.EAST);
+
+        bottomArea.add(totalBox);
+        bottomArea.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        JButton checkoutBtn = new JButton("Simulate Plan Subscription");
+        stylePillButton(checkoutBtn, SPOTIFY_GREEN, Color.BLACK);
+        checkoutBtn.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        checkoutBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        checkoutBtn.addActionListener(e -> {
+            JOptionPane.showMessageDialog(this,
+                    "Subscription simulation confirmed!\n\n" +
+                    "Selected Tier: Spotify " + selectedTier + "\n" +
+                    "Total Amount: " + totalCostLabel.getText() + "\n" +
+                    "Simulation Status: Transaction processed successfully.",
+                    "Subscription Confirmed",
+                    JOptionPane.INFORMATION_MESSAGE);
+        });
+        bottomArea.add(checkoutBtn);
+
+        invoiceCard.add(bottomArea, BorderLayout.SOUTH);
         centerGrid.add(invoiceCard);
+
         panel.add(centerGrid, BorderLayout.CENTER);
 
         updateCardHighlights();
@@ -818,27 +935,45 @@ public class SpotifySystem extends JFrame {
 
     private RoundedPanel createPlanCard(String name, String price, String sub, double basePrice, int accounts) {
         RoundedPanel card = new RoundedPanel(14, CARD_BG, BORDER_COLOR);
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setLayout(new BorderLayout(8, 4));
         card.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JPanel topRow = new JPanel(new BorderLayout());
+        topRow.setOpaque(false);
 
         JLabel nameLbl = new JLabel(name);
         nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 15));
         nameLbl.setForeground(TEXT_WHITE);
+        topRow.add(nameLbl, BorderLayout.WEST);
+
+        String badgeText = accounts == 1 ? "1 USER" : accounts + " USERS";
+        JLabel badgeLbl = new JLabel(badgeText);
+        badgeLbl.setFont(new Font("Segoe UI", Font.BOLD, 10));
+        badgeLbl.setForeground(SPOTIFY_GREEN);
+        topRow.add(badgeLbl, BorderLayout.EAST);
+
+        card.add(topRow, BorderLayout.NORTH);
+
+        JPanel centerInfo = new JPanel();
+        centerInfo.setLayout(new BoxLayout(centerInfo, BoxLayout.Y_AXIS));
+        centerInfo.setOpaque(false);
 
         JLabel priceLbl = new JLabel(price);
-        priceLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        priceLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
         priceLbl.setForeground(SPOTIFY_GREEN);
+        priceLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel subLbl = new JLabel(sub);
         subLbl.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         subLbl.setForeground(TEXT_MUTED);
+        subLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        card.add(nameLbl);
-        card.add(Box.createRigidArea(new Dimension(0, 2)));
-        card.add(priceLbl);
-        card.add(Box.createRigidArea(new Dimension(0, 2)));
-        card.add(subLbl);
+        centerInfo.add(priceLbl);
+        centerInfo.add(Box.createRigidArea(new Dimension(0, 2)));
+        centerInfo.add(subLbl);
+
+        card.add(centerInfo, BorderLayout.CENTER);
 
         card.addMouseListener(new MouseAdapter() {
             @Override
@@ -855,17 +990,20 @@ public class SpotifySystem extends JFrame {
     }
 
     private void updateCardHighlights() {
-        studentCard.setBorderColor("Student".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
-        studentCard.setBackgroundColor("Student".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+        Color activeBorder = SPOTIFY_GREEN;
+        Color activeBg = new Color(28, 42, 32);
 
-        individualCard.setBorderColor("Individual".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
-        individualCard.setBackgroundColor("Individual".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+        studentCard.setBorderColor("Student".equals(selectedTier) ? activeBorder : BORDER_COLOR);
+        studentCard.setBackgroundColor("Student".equals(selectedTier) ? activeBg : CARD_BG);
 
-        duoCard.setBorderColor("Duo".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
-        duoCard.setBackgroundColor("Duo".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+        individualCard.setBorderColor("Individual".equals(selectedTier) ? activeBorder : BORDER_COLOR);
+        individualCard.setBackgroundColor("Individual".equals(selectedTier) ? activeBg : CARD_BG);
 
-        familyCard.setBorderColor("Family".equals(selectedTier) ? SPOTIFY_GREEN : BORDER_COLOR);
-        familyCard.setBackgroundColor("Family".equals(selectedTier) ? CARD_SELECTED_BG : CARD_BG);
+        duoCard.setBorderColor("Duo".equals(selectedTier) ? activeBorder : BORDER_COLOR);
+        duoCard.setBackgroundColor("Duo".equals(selectedTier) ? activeBg : CARD_BG);
+
+        familyCard.setBorderColor("Family".equals(selectedTier) ? activeBorder : BORDER_COLOR);
+        familyCard.setBackgroundColor("Family".equals(selectedTier) ? activeBg : CARD_BG);
     }
 
     private void calculateSubscriptionFare() {
@@ -896,45 +1034,93 @@ public class SpotifySystem extends JFrame {
         String currencySymbol = "$";
         double exchangeRate = 1.0;
         int currIndex = currencyCombo.getSelectedIndex();
-        if (currIndex == 1) { currencySymbol = "€"; exchangeRate = 0.92; }
-        else if (currIndex == 2) { currencySymbol = "£"; exchangeRate = 0.79; }
-        else if (currIndex == 3) { currencySymbol = "RM"; exchangeRate = 4.70; }
+        if (currIndex == 1) { currencySymbol = "\u20AC"; exchangeRate = 0.92; }
+        else if (currIndex == 2) { currencySymbol = "\u00A3"; exchangeRate = 0.79; }
+        else if (currIndex == 3) { currencySymbol = "RM "; exchangeRate = 4.70; }
 
         double finalConvertedTotal = totalFare * exchangeRate;
         double perUserCost = finalConvertedTotal / selectedAccounts;
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("=========================================\n");
-        sb.append("      SPOTIFY SUBSCRIPTION INVOICE       \n");
-        sb.append("=========================================\n\n");
-        sb.append(String.format("Plan Tier          : %s (%d Account%s)\n", selectedTier, selectedAccounts, selectedAccounts > 1 ? "s" : ""));
-        sb.append(String.format("Billing Cycle      : %s\n", isAnnual ? "Annual (12 Mos / Pay 10)" : "Monthly"));
-        sb.append(String.format("Base Rate / Month  : %s%.2f\n", currencySymbol, selectedBasePrice * exchangeRate));
-        sb.append(String.format("Base Duration Rate : %s%.2f\n\n", currencySymbol, baseFare * exchangeRate));
+        StringBuilder html = new StringBuilder();
+        html.append("<html><body style='font-family:Segoe UI, sans-serif; background-color:#121212; color:#FFFFFF; margin:8px 12px;'>");
+        
+        // Header badge
+        html.append("<table width='100%' style='border-bottom:1px solid #282828; padding-bottom:8px; margin-bottom:10px;'>");
+        html.append("<tr>");
+        html.append("<td style='font-size:15px; font-weight:bold; color:#FFFFFF;'>Spotify ").append(selectedTier).append(" Plan</td>");
+        html.append("<td align='right' style='font-size:11px; font-weight:bold; color:#1DB954;'>")
+            .append(selectedAccounts).append(selectedAccounts > 1 ? " ACCOUNTS" : " ACCOUNT").append("</td>");
+        html.append("</tr>");
+        html.append("</table>");
 
-        sb.append("--- Add-ons & Adjustments ---\n");
+        // Line Items Table
+        html.append("<table width='100%' cellpadding='4' cellspacing='0'>");
+        
+        // Base rate
+        html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>Base Monthly Rate:</td>")
+            .append("<td align='right' style='color:#FFFFFF; font-size:12px; font-weight:bold;'>")
+            .append(currencySymbol).append(String.format("%.2f", selectedBasePrice * exchangeRate)).append(" / mo</td></tr>");
+            
+        // Duration
+        html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>Billing Cycle:</td>")
+            .append("<td align='right' style='color:#FFFFFF; font-size:12px;'>")
+            .append(isAnnual ? "Annual (12 Mos / Pay for 10)" : "Monthly").append("</td></tr>");
+
+        html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>Base Duration Fare:</td>")
+            .append("<td align='right' style='color:#FFFFFF; font-size:12px; font-weight:bold;'>")
+            .append(currencySymbol).append(String.format("%.2f", baseFare * exchangeRate)).append("</td></tr>");
+
+        // Divider
+        html.append("<tr><td colspan='2' style='border-top:1px solid #242424; padding-top:6px;'></td></tr>");
+
+        // Add-ons
         if (hifiCheckBox.isSelected()) {
-            sb.append(String.format(" + Hi-Fi Audio (15%%) : %s%.2f\n", currencySymbol, hifiFee * exchangeRate));
+            html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>+ Hi-Fi Audio (15%):</td>")
+                .append("<td align='right' style='color:#1DB954; font-size:12px; font-weight:bold;'>+")
+                .append(currencySymbol).append(String.format("%.2f", hifiFee * exchangeRate)).append("</td></tr>");
         }
         if (offlineCheckBox.isSelected()) {
-            sb.append(String.format(" + Extra Device Sync : %s%.2f\n", currencySymbol, offlineFee * exchangeRate));
+            html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>+ Extra Device Sync:</td>")
+                .append("<td align='right' style='color:#1DB954; font-size:12px; font-weight:bold;'>+")
+                .append(currencySymbol).append(String.format("%.2f", offlineFee * exchangeRate)).append("</td></tr>");
         }
+        if (!hifiCheckBox.isSelected() && !offlineCheckBox.isSelected()) {
+            html.append("<tr><td style='color:#666666; font-size:11px; font-style:italic;'>No optional add-ons selected</td>")
+                .append("<td align='right' style='color:#666666; font-size:11px;'>").append(currencySymbol).append("0.00</td></tr>");
+        }
+
+        // Promo
         if (promoDiscount > 0) {
-            sb.append(String.format(" - Promo (STUDENT10): -%s%.2f\n", currencySymbol, promoDiscount * exchangeRate));
+            html.append("<tr><td style='color:#1DB954; font-size:12px; font-weight:bold;'>- Promo (STUDENT10 - 10% OFF):</td>")
+                .append("<td align='right' style='color:#1DB954; font-size:12px; font-weight:bold;'>-")
+                .append(currencySymbol).append(String.format("%.2f", promoDiscount * exchangeRate)).append("</td></tr>");
         } else if (invalidPromo) {
-            sb.append(String.format(" - Promo (%s)   : [Invalid code]\n", promoCode));
+            html.append("<tr><td style='color:#ff5555; font-size:11px;'>Promo '").append(promoCode).append("':</td>")
+                .append("<td align='right' style='color:#ff5555; font-size:11px;'>[Invalid code]</td></tr>");
         }
 
-        sb.append(String.format("Est. Tax (6%% SST)  : %s%.2f\n", currencySymbol, tax * exchangeRate));
-        sb.append("-----------------------------------------\n");
-        sb.append(String.format("TOTAL FARE         : %s%.2f %s\n", currencySymbol, finalConvertedTotal, isAnnual ? "/ year" : "/ month"));
+        // Subtotal & Tax
+        html.append("<tr><td colspan='2' style='border-top:1px solid #242424; padding-top:6px;'></td></tr>");
+        html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>Subtotal:</td>")
+            .append("<td align='right' style='color:#FFFFFF; font-size:12px;'>")
+            .append(currencySymbol).append(String.format("%.2f", discountedSubtotal * exchangeRate)).append("</td></tr>");
+        html.append("<tr><td style='color:#A7A7A7; font-size:12px;'>Estimated Tax (6% SST):</td>")
+            .append("<td align='right' style='color:#FFFFFF; font-size:12px;'>")
+            .append(currencySymbol).append(String.format("%.2f", tax * exchangeRate)).append("</td></tr>");
+
+        html.append("</table>");
+        html.append("</body></html>");
+
+        invoiceHtmlPane.setText(html.toString());
+        invoiceHtmlPane.setCaretPosition(0);
+
+        totalCostLabel.setText(String.format("%s%.2f %s", currencySymbol, finalConvertedTotal, isAnnual ? "/ yr" : "/ mo"));
         if (selectedAccounts > 1) {
-            sb.append(String.format("Cost Per Account   : %s%.2f / user\n", currencySymbol, perUserCost));
+            perUserCostLabel.setText(String.format("%d Accounts \u2022 %s%.2f / user per %s", 
+                    selectedAccounts, currencySymbol, perUserCost, isAnnual ? "year" : "month"));
+        } else {
+            perUserCostLabel.setText("1 Premium Account Included");
         }
-        sb.append("=========================================\n");
-
-        invoiceTextArea.setText(sb.toString());
-        totalCostLabel.setText(String.format("Total: %s%.2f %s", currencySymbol, finalConvertedTotal, isAnnual ? "/yr" : "/mo"));
     }
 
     // ==========================================

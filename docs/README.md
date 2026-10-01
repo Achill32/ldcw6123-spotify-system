@@ -88,16 +88,3 @@ java -cp bin SpotifySystem
    - Synchronized detail card showing comprehensive history and theoretical key insights.
 
 ---
-
-##  Git Version Control & Rubric Trace
-
-To regenerate the `git_log_output.txt` required for the submission PDF:
-```cmd
-view_git_log.bat
-```
-Or run directly:
-```bash
-git log --oneline --graph
-```
-
----

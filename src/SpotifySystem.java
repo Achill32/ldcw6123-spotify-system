@@ -269,20 +269,25 @@ public class SpotifySystem extends JFrame {
         sidebar.setPreferredSize(new Dimension(240, 0));
         sidebar.setBorder(BorderFactory.createEmptyBorder(25, 20, 25, 20));
 
-        // Brand Header
-        JLabel logoLabel = new JLabel("Spotify");
+        // Brand Header (Centered)
+        JPanel brandHeader = new JPanel(new GridLayout(2, 1, 0, 4));
+        brandHeader.setOpaque(false);
+        brandHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        brandHeader.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+
+        JLabel logoLabel = new JLabel("Spotify", SwingConstants.CENTER);
         logoLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         logoLabel.setForeground(TEXT_WHITE);
-        logoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subLabel = new JLabel("LDCW6123 Group Project");
+        JLabel subLabel = new JLabel("LDCW6123 Group Project", SwingConstants.CENTER);
         subLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         subLabel.setForeground(TEXT_MUTED);
-        subLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        sidebar.add(logoLabel);
-        sidebar.add(subLabel);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 35)));
+        brandHeader.add(logoLabel);
+        brandHeader.add(subLabel);
+
+        sidebar.add(brandHeader);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
 
         // Navigation Buttons
         navRecBtn = createNavButton("Recommendation Assistant", "REC");
@@ -397,22 +402,30 @@ public class SpotifySystem extends JFrame {
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBackground(DARK_BG);
 
-        JLabel titleLabel = new JLabel("Music Recommendation Assistant");
+        // Centered Header Titles
+        JPanel headerTitles = new JPanel(new GridLayout(2, 1, 0, 4));
+        headerTitles.setBackground(DARK_BG);
+        headerTitles.setAlignmentX(Component.CENTER_ALIGNMENT);
+        headerTitles.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+
+        JLabel titleLabel = new JLabel("Music Recommendation Assistant", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(TEXT_WHITE);
 
-        JLabel descLabel = new JLabel("Personalized track recommendations based on audio genre preferences and popularity rating filters.");
+        JLabel descLabel = new JLabel("Personalized track recommendations based on audio genre preferences and popularity rating filters.", SwingConstants.CENTER);
         descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         descLabel.setForeground(TEXT_MUTED);
 
-        topPanel.add(titleLabel);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 4)));
-        topPanel.add(descLabel);
-        topPanel.add(Box.createRigidArea(new Dimension(0, 20)));
+        headerTitles.add(titleLabel);
+        headerTitles.add(descLabel);
+
+        topPanel.add(headerTitles);
+        topPanel.add(Box.createRigidArea(new Dimension(0, 18)));
 
         // Filter Controls Card
         RoundedPanel filterCard = new RoundedPanel(16, CARD_BG, BORDER_COLOR);
         filterCard.setLayout(new FlowLayout(FlowLayout.LEFT, 18, 12));
+        filterCard.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         // Genre Selector
         JLabel genreLbl = new JLabel("Genre:");
@@ -433,7 +446,7 @@ public class SpotifySystem extends JFrame {
         popLbl.setForeground(TEXT_MUTED);
         filterCard.add(popLbl);
 
-        String[] popRanges = {"All", "0-20", "20-40", "40-60", "60-80", "80-100"};
+        String[] popRanges = {"All", "0-20", "20-40", "40-60", "60-80", "80-100+"};
         int[][] popBounds = {{0, 100}, {0, 20}, {20, 40}, {40, 60}, {60, 80}, {80, 100}};
 
         for (int i = 0; i < popRanges.length; i++) {
@@ -442,7 +455,8 @@ public class SpotifySystem extends JFrame {
             phaseBtn.setFont(new Font("Segoe UI", Font.BOLD, 11));
             phaseBtn.setFocusPainted(false);
             phaseBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            phaseBtn.setPreferredSize(new Dimension(popRanges[i].equals("All") ? 46 : 56, 30));
+            int btnWidth = popRanges[i].equals("All") ? 46 : (popRanges[i].contains("+") ? 72 : 58);
+            phaseBtn.setPreferredSize(new Dimension(btnWidth, 30));
             phaseBtn.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(BORDER_COLOR, 1),
                     BorderFactory.createEmptyBorder(4, 8, 4, 8)
@@ -1120,9 +1134,8 @@ public class SpotifySystem extends JFrame {
         JPanel centerGrid = new JPanel(new GridLayout(1, 2, 25, 0));
         centerGrid.setBackground(DARK_BG);
 
-        // LEFT: List of Stages
-        JPanel listPanel = new JPanel();
-        listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
+        // LEFT: List of Stages - GridLayout(6, 1, 0, 8) guarantees identical size for all 6 cards
+        JPanel listPanel = new JPanel(new GridLayout(6, 1, 0, 8));
         listPanel.setBackground(DARK_BG);
 
         // Detailed data
@@ -1199,6 +1212,7 @@ public class SpotifySystem extends JFrame {
         
         JScrollPane detailScroll = new JScrollPane(detailTextArea);
         detailScroll.setBorder(null);
+        detailScroll.getViewport().setBackground(CARD_BG);
         detailScroll.getVerticalScrollBar().setUI(new DarkScrollBarUI());
         detailScroll.getVerticalScrollBar().setPreferredSize(new Dimension(8, 0));
         detailCard.add(detailScroll, BorderLayout.CENTER);
@@ -1216,29 +1230,39 @@ public class SpotifySystem extends JFrame {
         List<RoundedPanel> cards = new ArrayList<>();
         
         for (int i = 0; i < 6; i++) {
-            int index = i;
+            final int index = i;
             RoundedPanel c = new RoundedPanel(12, CARD_BG, BORDER_COLOR);
-            c.setLayout(new BoxLayout(c, BoxLayout.Y_AXIS));
-            c.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+            c.setLayout(new BorderLayout(8, 4));
+            c.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
             c.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
+            JPanel cardContent = new JPanel();
+            cardContent.setLayout(new BoxLayout(cardContent, BoxLayout.Y_AXIS));
+            cardContent.setOpaque(false);
+
             JLabel nLbl = new JLabel(stageNames[i]);
-            nLbl.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            nLbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
             nLbl.setForeground(TEXT_WHITE);
+            nLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            nLbl.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
             
             JLabel yLbl = new JLabel(stageYears[i]);
-            yLbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            yLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
             yLbl.setForeground(SPOTIFY_GREEN);
+            yLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+            yLbl.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
             
-            JLabel sLbl = new JLabel(stageSummaries[i]);
-            sLbl.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            JLabel sLbl = new JLabel("<html><div style='color: #a7a7a7; font-family: Segoe UI; font-size: 10px; line-height: 1.2;'>" 
+                    + stageSummaries[i] + "</div></html>");
+            sLbl.setFont(new Font("Segoe UI", Font.PLAIN, 10));
             sLbl.setForeground(TEXT_MUTED);
+            sLbl.setAlignmentX(Component.LEFT_ALIGNMENT);
             
-            c.add(nLbl);
-            c.add(Box.createRigidArea(new Dimension(0, 3)));
-            c.add(yLbl);
-            c.add(Box.createRigidArea(new Dimension(0, 5)));
-            c.add(sLbl);
+            cardContent.add(nLbl);
+            cardContent.add(yLbl);
+            cardContent.add(sLbl);
+
+            c.add(cardContent, BorderLayout.CENTER);
             
             c.addMouseListener(new MouseAdapter() {
                 @Override
@@ -1260,7 +1284,6 @@ public class SpotifySystem extends JFrame {
             
             cards.add(c);
             listPanel.add(c);
-            listPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         }
         
         // Select first by default
@@ -1269,6 +1292,7 @@ public class SpotifySystem extends JFrame {
 
         JScrollPane listScroll = createDarkScrollPane(listPanel);
         listScroll.setBorder(null);
+        listScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         centerGrid.add(listScroll);
         centerGrid.add(detailCard);
         

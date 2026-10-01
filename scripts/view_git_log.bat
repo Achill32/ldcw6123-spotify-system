@@ -1,6 +1,7 @@
 @echo off
 title Spotify System - Git Log Trace Generator (LDCW6123)
 color 0B
+cd /d "%~dp0\.."
 
 echo =======================================================
 echo          SPOTIFY SYSTEM - GIT LOG DEVELOPMENT TRACE

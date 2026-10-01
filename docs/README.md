@@ -11,8 +11,9 @@ Digital Comp/
 │
 ├── Launch_Spotify_App.bat        # 1-Click build & launch launcher
 ├── run.bat                       # Quick runner
-├── view_git_log.bat              # Displays and exports git log trace
 │
+├── scripts/
+│   └── view_git_log.bat          # Displays and exports git log trace
 ├── src/
 │   └── SpotifySystem.java        # Main Java Swing application source code
 │
